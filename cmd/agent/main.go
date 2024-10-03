@@ -72,7 +72,7 @@ Flags:`)
 
 	d, err := quic.NewDialer(ctx, dialerConf)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Create dialer error")
+		log.Fatal().Err(err).Msg("create dialer error")
 	}
 
 	// go func() {
@@ -80,9 +80,10 @@ Flags:`)
 	// 	log.Fatal().Err(http.ListenAndServe("0.0.0.0:5001", nil)).Send()
 	// }()
 
-	if err := d.DialAndServe(ctx); err != nil {
-		log.Error().Msg("dialAndServe error")
+	if err := d.Run(ctx); err != nil {
+		log.Error().Err(err).Send()
+		return
 	}
 
-	log.Info().Msg("Dialer stopped")
+	log.Info().Msg("agent stopped")
 }

@@ -26,6 +26,9 @@ func UDP(ctx context.Context, conn quic.Connection, fr *udp.ForwarderRequest) {
 		return
 	}
 
+	// Set up the UDP connection with the new endpoint and pipe data
+	gonetConn := gonet.NewUDPConn(&wq, ep)
+
 	// Identify the flow and log it for better visibility
 	s := fr.ID()
 	log.Debug().Msgf("received UDP flow from %s to %s",
@@ -86,8 +89,6 @@ func UDP(ctx context.Context, conn quic.Connection, fr *udp.ForwarderRequest) {
 		return
 	}
 
-	// Set up the UDP connection with the new endpoint and pipe data
-	gonetConn := gonet.NewUDPConn(&wq, ep)
 	// Pipe data between the QUIC stream and the UDP connection.
 	relay.Pipe(stream, gonetConn)
 }

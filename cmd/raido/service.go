@@ -70,27 +70,18 @@ var (
 			}
 
 			go func() {
-				log.Info().Msg("starting proxy...")
-				if err := ps.Listen(cmd.Context()); err != nil {
-					log.Fatal().Err(err).Msg("Failed to listen proxy")
+				log.Info().Msg("starting service...")
+				if err := s.Run(cmd.Context()); err != nil {
+					log.Error().Err(err).Msg("failed to start service")
 					return
 				}
-				log.Info().Msg("proxy server stopped")
 			}()
 
-			log.Info().Msg("starting service...")
-			if err := s.Run(cmd.Context()); err != nil {
-				log.Error().Err(err).Msg("failed to start service")
+			log.Info().Msg("starting proxy...")
+			if err := ps.Listen(cmd.Context()); err != nil {
+				log.Fatal().Err(err).Msg("Failed to listen proxy")
 				return
 			}
-		},
-	}
-
-	serviceInstallCmd = &cobra.Command{
-		Use:   "install",
-		Short: "Install service",
-		Run: func(cmd *cobra.Command, args []string) {
-			log.Info().Msg("Service installed")
 		},
 	}
 
@@ -109,5 +100,5 @@ func init() {
 	serviceStartCmd.Flags().StringP("cert-file", "c", "cert.crt", "TLS certificate file path")
 	serviceStartCmd.Flags().StringP("key-file", "k", "cert.key", "TLS private key file path")
 
-	serviceCmd.AddCommand(serviceStartCmd, serviceHealthCheckCmd)
+	serviceCmd.AddCommand(serviceStartCmd, serviceInstallCmd, serviceHealthCheckCmd)
 }

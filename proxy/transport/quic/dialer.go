@@ -9,22 +9,49 @@ import (
 	"net"
 	"os"
 	"os/user"
+	"runtime"
 	"time"
 
 	"github.com/fr13n8/raido/config"
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/relay"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/quic-go/quic-go"
 	"github.com/rs/zerolog/log"
 )
 
+var (
+	// DefaultBackoff is the default backoff used when dialing and serving
+	// a connection.
+	DefaultBackoff = wait.Backoff{
+		Steps:    5,
+		Duration: 100 * time.Millisecond,
+		Factor:   2.0,
+		Jitter:   0.1,
+	}
+
+	qConf = &quic.Config{
+		HandshakeIdleTimeout:       5 * time.Second,
+		MaxIdleTimeout:             5 * time.Second,
+		KeepAlivePeriod:            1 * time.Second,
+		MaxIncomingStreams:         1 << 60,
+		MaxIncomingUniStreams:      -1,
+		DisablePathMTUDiscovery:    false,
+		MaxConnectionReceiveWindow: 30 * (1 << 20), // 30 MB
+		MaxStreamReceiveWindow:     6 * (1 << 20),  // 6 MB
+		// InitialPacketSize:          1252,
+		Versions: []quic.Version{quic.Version2},
+		// Tracer:   NewClientTracer(&log.Logger, 1),
+	}
+)
+
 type Dialer struct {
-	TLSConfig   *tls.Config
 	quicAddress string
-	conn        quic.Connection
 	streamCh    chan quic.Stream
+	qConf       *quic.Config
+	tlsConf     *tls.Config
 }
 
 func NewDialer(ctx context.Context, conf *config.Dialer) (*Dialer, error) {
@@ -53,43 +80,31 @@ func NewDialer(ctx context.Context, conf *config.Dialer) (*Dialer, error) {
 		}
 	}
 
-	log.Info().Msgf("attempting connection to %s", conf.ProxyAddress)
-	conn, err := quic.DialAddr(ctx, conf.ProxyAddress, tlsConf, &quic.Config{
-		HandshakeIdleTimeout:       5 * time.Second,
-		MaxIdleTimeout:             5 * time.Second,
-		KeepAlivePeriod:            1 * time.Second,
-		MaxIncomingStreams:         1 << 60,
-		MaxIncomingUniStreams:      -1,
-		DisablePathMTUDiscovery:    false,
-		MaxConnectionReceiveWindow: 30 * (1 << 20), // 30 MB
-		MaxStreamReceiveWindow:     6 * (1 << 20),  // 6 MB
-		// InitialPacketSize:          1252,
-		Versions: []quic.Version{quic.Version2},
-		// Tracer:   NewClientTracer(&log.Logger, 1),
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("could not dial QUIC")
-		return nil, err
-	}
-
 	return &Dialer{
-		TLSConfig:   tlsConf,
 		quicAddress: conf.ProxyAddress,
-		conn:        conn,
-		streamCh:    make(chan quic.Stream, 10), // Buffered channel to avoid blocking
+		streamCh:    make(chan quic.Stream, runtime.NumCPU()), // Buffered channel to avoid blocking
+		qConf:       qConf,
+		tlsConf:     tlsConf,
 	}, nil
 }
 
-func (d *Dialer) DialAndServe(ctx context.Context) error {
+func (d *Dialer) dialAndServer(ctx context.Context) error {
+	log.Info().Msgf("attempting connection to %s", d.quicAddress)
+	conn, err := quic.DialAddr(ctx, d.quicAddress, d.tlsConf, d.qConf)
+	if err != nil {
+		return err
+	}
+
 	log.Info().Msgf("starting dialing to %s", d.quicAddress)
 	var g errgroup.Group
 
+	ctx, stop := context.WithCancel(ctx)
 	// Handle context cancellation and connection closing
 	g.Go(func() error {
 		<-ctx.Done()
 		close(d.streamCh)
 
-		d.conn.CloseWithError(protocol.ApplicationOK, "client closing down")
+		conn.CloseWithError(protocol.ApplicationOK, "client closing down")
 
 		return nil
 	})
@@ -97,25 +112,29 @@ func (d *Dialer) DialAndServe(ctx context.Context) error {
 	// Process QUIC streams
 	g.Go(func() error {
 		for {
-			stream, err := d.conn.AcceptStream(ctx)
+			stream, err := conn.AcceptStream(ctx)
 			if err != nil {
 				var appErr *quic.ApplicationError
 				if errors.As(err, &appErr) || errors.Is(err, context.Canceled) {
 					log.Info().Msg("connection closed")
-					return nil
+					break
 				}
 
 				log.Error().Err(err).Msg("failed to accept QUIC stream")
-				return err
+				continue
 			}
 			d.streamCh <- stream
 		}
+
+		stop()
+		return nil
 	})
 
 	// Start worker pool to process QUIC streams
 	g.Go(func() error {
 		if err := d.ProcessConnection(ctx); err != nil {
 			log.Error().Err(err).Msg("could not process connection")
+			return err
 		}
 
 		log.Info().Msg("connection processing stopped")
@@ -125,14 +144,29 @@ func (d *Dialer) DialAndServe(ctx context.Context) error {
 	return g.Wait()
 }
 
+func (d *Dialer) Run(ctx context.Context) error {
+	return wait.ExponentialBackoffWithContext(ctx, DefaultBackoff, func(context.Context) (done bool, err error) {
+		if err := d.dialAndServer(ctx); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return false, nil
+			}
+
+			log.Error().Err(err).Msg("error while attempting to dial server")
+			return false, nil
+		}
+
+		return true, nil
+	})
+}
+
 func (d *Dialer) ProcessConnection(ctx context.Context) error {
-	// workerCount := runtime.NumCPU()
-	// sem := make(chan struct{}, workerCount)
+	workerCount := runtime.NumCPU()
+	sem := make(chan struct{}, workerCount)
 
 	for stream := range d.streamCh {
-		// sem <- struct{}{} // Acquire a worker slot
+		sem <- struct{}{} // Acquire a worker slot
 		go func(s quic.Stream) {
-			// defer func() { <-sem }()   // Release worker slot when done
+			defer func() { <-sem }()   // Release worker slot when done
 			d.handleQUICStream(ctx, s) // Process the stream
 		}(stream)
 	}

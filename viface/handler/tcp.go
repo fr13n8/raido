@@ -16,7 +16,18 @@ import (
 )
 
 func TCP(ctx context.Context, conn quic.Connection, fr *tcp.ForwarderRequest) {
+	// Create a waiter queue and TCP endpoint for the forwarded connection.
+	var wq waiter.Queue
+	ep, tcperr := fr.CreateEndpoint(&wq)
+	if tcperr != nil {
+		log.Error().Msgf("failed to create TCP endpoint: %s", tcperr)
+		fr.Complete(true)
+		return
+	}
 	defer fr.Complete(false)
+
+	// Convert the TCP endpoint into a Go net TCP connection.
+	gonetConn := gonet.NewTCPConn(&wq, ep)
 
 	// Get the flow info (source and destination addresses and ports).
 	s := fr.ID()
@@ -77,16 +88,6 @@ func TCP(ctx context.Context, conn quic.Connection, fr *tcp.ForwarderRequest) {
 		return
 	}
 
-	// Create a waiter queue and TCP endpoint for the forwarded connection.
-	var wq waiter.Queue
-	ep, tcperr := fr.CreateEndpoint(&wq)
-	if tcperr != nil {
-		log.Error().Msgf("failed to create TCP endpoint: %s", tcperr)
-		return
-	}
-
-	// Convert the TCP endpoint into a Go net TCP connection.
-	gonetConn := gonet.NewTCPConn(&wq, ep)
 	// Pipe data between the QUIC stream and the TCP connection.
 	relay.Pipe(stream, gonetConn)
 }

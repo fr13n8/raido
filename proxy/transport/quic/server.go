@@ -125,7 +125,6 @@ func (s *Server) Listen(ctx context.Context) error {
 		shutdownCtx, stop := context.WithTimeout(context.Background(), 5*time.Second) // Set a timeout for graceful shutdown
 		defer stop()
 
-		log.Info().Msg("shutting down proxy server")
 		close(s.connCh)
 
 		if err := s.ShutdownGracefully(shutdownCtx); err != nil {
