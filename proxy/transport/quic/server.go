@@ -167,5 +167,24 @@ func (s *Server) StartHandshake(ctx context.Context, conn quic.Connection) {
 	}
 
 	// Add the new agent to the agent manager
-	s.agentManager.AddAgent(shortuuid.New(), agent.New(dec.Name, conn, routes))
+	agentiId := shortuuid.New()
+	s.agentManager.AddAgent(agentiId, agent.New(dec.Name, conn, routes))
+
+	go func() {
+		for {
+			_, err := conn.AcceptStream(ctx)
+			if err != nil {
+				var appErr *quic.ApplicationError
+				if errors.As(err, &appErr) {
+					if appErr.ErrorCode == protocol.ApplicationOK {
+						log.Info().Str("agent_id", agentiId).Msg("agent closed connection")
+						s.agentManager.RemoveAgent(agentiId)
+						return
+					}
+				}
+				log.Error().Err(err).Msg("failed to accept new stream from agent")
+				return
+			}
+		}
+	}()
 }
