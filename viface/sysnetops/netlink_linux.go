@@ -10,6 +10,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 type LinkTun struct {
@@ -30,7 +31,13 @@ func NewLinkTun() (*LinkTun, error) {
 			log.Info().Msgf("interface \"%s\" already exists. Will reuse.", link.Attrs().Name)
 			return &LinkTun{link}, nil
 		}
-		return nil, fmt.Errorf("failed to add interface: %w", err)
+		if os.IsNotExist(err) {
+			if err := createTunDevice(); err != nil {
+				return nil, fmt.Errorf("failed to create TUN device: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to add interface: %w", err)
+		}
 	}
 
 	if err := netlink.LinkSetUp(link); err != nil {
@@ -188,4 +195,29 @@ func (l *LinkTun) Routes() (map[string]netlink.Route, error) {
 		tapRoutes[route.Dst.String()] = route
 	}
 	return tapRoutes, nil
+}
+
+func createTunDevice() error {
+	// Create the /dev/net directory if it doesn't exist
+	err := os.MkdirAll("/dev/net", 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create /dev/net: %v", err)
+	}
+
+	// Check if the /dev/net/tun device already exists
+	if _, err := os.Stat("/dev/net/tun"); os.IsNotExist(err) {
+		// Create the /dev/net/tun device node with major number 10 and minor number 200
+		err = unix.Mknod("/dev/net/tun", unix.S_IFCHR|0600, int(unix.Mkdev(10, 200)))
+		if err != nil {
+			return fmt.Errorf("failed to create /dev/net/tun: %v", err)
+		}
+	}
+
+	// Change permissions of /dev/net/tun to 600
+	err = os.Chmod("/dev/net/tun", 0600)
+	if err != nil {
+		return fmt.Errorf("failed to change permissions for /dev/net/tun: %v", err)
+	}
+
+	return nil
 }

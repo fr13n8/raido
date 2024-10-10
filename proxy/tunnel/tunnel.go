@@ -20,7 +20,7 @@ type Tunnel struct {
 func NewTunnel(ctx context.Context, conn quic.Connection) (*Tunnel, error) {
 	link, err := sysnetops.NewLinkTun()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create TUN device: %w", err)
+		return nil, fmt.Errorf("failed to create TUN interface: %w", err)
 	}
 
 	tun, err := device.Open(link.Name())
