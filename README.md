@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://fr13n8.github.io/blog/"><img src="https://img.shields.io/badge/made%20by-fr13n8-blue.svg?style=flat-square" /></a>
   <img src="https://img.shields.io/badge/go%20version-%3E=1.23-61CFDD.svg?style=flat-square" />
-  <img src="https://goreportcard.com/badge/github.com/fr13n8/raido?style=flat-square" />
+  <img src="https://goreportcard.com/badge/github.com/fr13n8/raido" />
 </p>
 
 <div align="center">
