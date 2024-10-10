@@ -104,7 +104,7 @@ That's it, now you can send requests directly to these addresses.
 
 ## TODO
 
-- Think about a way to transmit ICMP packets without changing the gVisor code. (Maybe use agent to detect hosts using icmp-echo requests) ¯\_(ツ)_/¯
+- Think about a way to transmit ICMP packets without changing the gVisor code. (Maybe use agent to detect hosts using icmp-echo requests) ¯\\_(ツ)_/¯
 - Add new transport protocols for traffic tunneling
 - Add the ability to build chains of agents
 - Add the ability to independently select which addresses to add for tunneling
