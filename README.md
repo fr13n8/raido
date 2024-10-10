@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img width="200" src="./doc/raido.png" alt="raido logo" />
+  <img width="250" src="./doc/raido.png" alt="raido logo" />
 </h1>
 
 <h3 align="center">Raido is a “VPN-like” reverse proxy server with tunneling traffic through QUIC to access private network</h3>
@@ -11,8 +11,10 @@
 </p>
 
 <div align="center">
-  <img width="80%" src="./doc/diagram.svg" />
+  <img width="100%" src="./doc/diagram.svg" />
 </div>
+
+---
 
 > [!WARNING]
 > **The functionality was tested only on Linux machines.**
