@@ -2,7 +2,7 @@
   <img width="250" src="./doc/raido.png" alt="raido logo" />
 </h1>
 
-<h3 align="center">Raido is a “VPN-like” reverse proxy server with tunneling traffic through QUIC to access private network</h3>
+<h3 align="center">Raido is a "VPN-like" reverse proxy with traffic tunneling via QUIC for accessing private networks</h3>
 
 <p align="center">
   <a href="https://fr13n8.github.io/blog/"><img src="https://img.shields.io/badge/made%20by-fr13n8-blue.svg?style=flat-square" /></a>
