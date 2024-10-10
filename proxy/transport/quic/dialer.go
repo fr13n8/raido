@@ -3,7 +3,6 @@ package quic
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
@@ -22,31 +21,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	// DefaultBackoff is the default backoff used when dialing and serving
-	// a connection.
-	DefaultBackoff = wait.Backoff{
-		Steps:    5,
-		Duration: 100 * time.Millisecond,
-		Factor:   2.0,
-		Jitter:   0.1,
-	}
-
-	qConf = &quic.Config{
-		HandshakeIdleTimeout:       5 * time.Second,
-		MaxIdleTimeout:             5 * time.Second,
-		KeepAlivePeriod:            1 * time.Second,
-		MaxIncomingStreams:         1 << 60,
-		MaxIncomingUniStreams:      -1,
-		DisablePathMTUDiscovery:    false,
-		MaxConnectionReceiveWindow: 30 * (1 << 20), // 30 MB
-		MaxStreamReceiveWindow:     6 * (1 << 20),  // 6 MB
-		// InitialPacketSize:          1252,
-		Versions: []quic.Version{quic.Version2},
-		// Tracer:   NewClientTracer(&log.Logger, 1),
-	}
-)
-
 type Dialer struct {
 	quicAddress string
 	streamCh    chan quic.Stream
@@ -54,45 +28,20 @@ type Dialer struct {
 	tlsConf     *tls.Config
 }
 
-func NewDialer(ctx context.Context, conf *config.Dialer) (*Dialer, error) {
-	tlsConf := &tls.Config{
-		MinVersion:         tls.VersionTLS13,
-		NextProtos:         []string{protocol.Name},
-		ServerName:         conf.TLSConfig.ServerName,
-		InsecureSkipVerify: conf.TLSConfig.InsecureSkipVerify,
-	}
-
-	// Initialize root CA pool
-	tlsConf.RootCAs, _ = x509.SystemCertPool()
-	if tlsConf.RootCAs == nil {
-		tlsConf.RootCAs = x509.NewCertPool()
-	}
-
-	if conf.TLSConfig.CertFile != "" {
-		caCertRaw, err := os.ReadFile(conf.TLSConfig.CertFile)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to read cert")
-			return nil, err
-		}
-		if !tlsConf.RootCAs.AppendCertsFromPEM(caCertRaw) {
-			log.Error().Err(err).Msg("failed to append cert at path")
-			return nil, err
-		}
-	}
-
+func NewDialer(ctx context.Context, conf *config.ProxyDialer) *Dialer {
 	return &Dialer{
 		quicAddress: conf.ProxyAddress,
 		streamCh:    make(chan quic.Stream, runtime.NumCPU()), // Buffered channel to avoid blocking
 		qConf:       qConf,
-		tlsConf:     tlsConf,
-	}, nil
+		tlsConf:     conf.TLSConfig,
+	}
 }
 
 func (d *Dialer) dialAndServer(ctx context.Context) error {
 	log.Info().Msgf("attempting connection to %s", d.quicAddress)
 	conn, err := quic.DialAddr(ctx, d.quicAddress, d.tlsConf, d.qConf)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not dial QUIC address: %w", err)
 	}
 
 	log.Info().Msgf("starting dialing to %s", d.quicAddress)
@@ -104,9 +53,7 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 		<-ctx.Done()
 		close(d.streamCh)
 
-		conn.CloseWithError(protocol.ApplicationOK, "client closing down")
-
-		return nil
+		return conn.CloseWithError(protocol.ApplicationOK, "client closing down")
 	})
 
 	// Process QUIC streams
@@ -132,10 +79,7 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 
 	// Start worker pool to process QUIC streams
 	g.Go(func() error {
-		if err := d.ProcessConnection(ctx); err != nil {
-			log.Error().Err(err).Msg("could not process connection")
-			return err
-		}
+		d.ProcessConnection(ctx)
 
 		log.Info().Msg("connection processing stopped")
 		return nil
@@ -147,11 +91,11 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 func (d *Dialer) Run(ctx context.Context) error {
 	return wait.ExponentialBackoffWithContext(ctx, DefaultBackoff, func(context.Context) (done bool, err error) {
 		if err := d.dialAndServer(ctx); err != nil {
+			log.Error().Err(err).Msg("could not dial and serve")
 			if errors.Is(err, context.Canceled) {
 				return false, nil
 			}
 
-			log.Error().Err(err).Msg("error while attempting to dial server")
 			return false, nil
 		}
 
@@ -159,7 +103,7 @@ func (d *Dialer) Run(ctx context.Context) error {
 	})
 }
 
-func (d *Dialer) ProcessConnection(ctx context.Context) error {
+func (d *Dialer) ProcessConnection(ctx context.Context) {
 	workerCount := runtime.NumCPU()
 	sem := make(chan struct{}, workerCount)
 
@@ -170,8 +114,6 @@ func (d *Dialer) ProcessConnection(ctx context.Context) error {
 			d.handleQUICStream(ctx, s) // Process the stream
 		}(stream)
 	}
-
-	return nil
 }
 
 func (d *Dialer) handleQUICStream(ctx context.Context, stream quic.Stream) {
@@ -200,11 +142,10 @@ func (d *Dialer) handleGetRoutesRequest(stream quic.Stream) {
 	}
 
 	encoder := protocol.NewEncoder[protocol.GetRoutesResp](stream)
-	err = encoder.Encode(protocol.GetRoutesResp{
+	if err := encoder.Encode(protocol.GetRoutesResp{
 		Name:   GetUserAndHostname(),
 		Routes: addrs,
-	})
-	if err != nil {
+	}); err != nil {
 		log.Error().Err(err).Msg("could not encode network routes response")
 	}
 }
@@ -235,19 +176,20 @@ func (d *Dialer) handleConnectionRequest(ctx context.Context, stream quic.Stream
 	if err := encoder.Encode(protocol.ConnectResponse{Established: true}); err != nil {
 		log.Error().Err(err).Msg("could not encode connection response")
 	}
-	relay.Pipe(targetConn, stream)
+	go relay.Pipe(targetConn, stream)
 }
 
 func GetNetRoutes() ([]string, error) {
 	netifaces, err := net.Interfaces()
 	if err != nil {
-		return nil, fmt.Errorf("get interfaces error: %w", err)
+		return nil, fmt.Errorf("could not get network interfaces: %w", err)
 	}
 
 	var addrs []string
 	for _, iface := range netifaces {
 		addresses, err := iface.Addrs()
 		if err != nil {
+			log.Error().Err(err).Msg("could not get network addresses")
 			continue
 		}
 		for _, addr := range addresses {
@@ -262,6 +204,7 @@ func GetUserAndHostname() string {
 	hostname, _ := os.Hostname()
 	userinfo, err := user.Current()
 	if err != nil {
+		log.Error().Err(err).Msg("could not get user info")
 		return fmt.Sprintf("unknown@%s", hostname)
 	}
 	return fmt.Sprintf("%s@%s", userinfo.Username, hostname)

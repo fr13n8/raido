@@ -31,7 +31,7 @@ func UDP(ctx context.Context, conn quic.Connection, fr *udp.ForwarderRequest) {
 
 	// Identify the flow and log it for better visibility
 	s := fr.ID()
-	log.Debug().Msgf("received UDP flow from %s to %s",
+	log.Info().Msgf("received UDP flow from %s to %s",
 		net.JoinHostPort(s.RemoteAddress.String(), fmt.Sprint(s.RemotePort)),
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 

@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/fr13n8/raido/viface/device"
 	"github.com/fr13n8/raido/viface/netstack"
@@ -19,17 +20,17 @@ type Tunnel struct {
 func NewTunnel(ctx context.Context, conn quic.Connection) (*Tunnel, error) {
 	link, err := sysnetops.NewLinkTun()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create TUN device: %w", err)
 	}
 
 	tun, err := device.Open(link.Name())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open TUN device: %w", err)
 	}
 
 	s, err := netstack.NewNetStack(ctx, tun.Dev(), conn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create network stack: %w", err)
 	}
 
 	return &Tunnel{
@@ -44,7 +45,7 @@ func (t *Tunnel) Close() error {
 	t.stack.Close()
 
 	if err := t.link.Destroy(); err != nil {
-		return err
+		return fmt.Errorf("failed to destroy TUN device: %w", err)
 	}
 
 	return nil

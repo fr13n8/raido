@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/fr13n8/raido/proxy/tunnel"
 	"github.com/quic-go/quic-go"
@@ -25,10 +26,13 @@ func New(name string, conn quic.Connection, routes []string) *Agent {
 }
 
 func (a *Agent) StartTunnel(ctx context.Context) error {
+	if a.Tunnel != nil {
+		return nil
+	}
+
 	tun, err := tunnel.NewTunnel(ctx, a.Conn)
 	if err != nil {
-		log.Error().Err(err).Msg("error create tunnel")
-		return err
+		return fmt.Errorf("failed to create tunnel: %w", err)
 	}
 
 	for _, r := range a.Routes {

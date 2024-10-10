@@ -1,31 +1,32 @@
 package config
 
-import "time"
+import (
+	"crypto/tls"
+	"time"
+)
+
+var (
+	ShutdownTimeout = 2 * time.Second
+	RaidoPath       = "/etc/raido"
+)
 
 type ProxyServer struct {
 	Address   string
-	TLSConfig *TLSConfig
+	TLSConfig *tls.Config
+}
+
+type ProxyDialer struct {
+	ProxyAddress string
+	RetryCount   uint8
+	TLSConfig    *tls.Config
 }
 
 type ServiceServer struct {
 	Address   string
-	TLSConfig *TLSConfig
+	TLSConfig *tls.Config
 }
 
-type Dialer struct {
-	ProxyAddress string
-	TLSConfig    *TLSConfig
-}
-
-type TLSConfig struct {
-	CertFile           string
-	KeyFile            string
-	CAFile             string
-	InsecureSkipVerify bool
-	ServerName         string
-
-	// for auto-generated default certificate.
-	Validity     time.Duration
-	CommonName   string
-	Organization string
+type ServiceDialer struct {
+	ServiceAddress string
+	TLSConfig      *tls.Config
 }

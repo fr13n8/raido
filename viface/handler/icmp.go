@@ -21,11 +21,11 @@ func StartResponder(s *stack.Stack, conn quic.Connection) error {
 
 	ep, err := raw.NewEndpoint(s, ipv4.ProtocolNumber, icmp.ProtocolNumber4, &wq)
 	if err != nil {
-		log.Debug().Msgf("Could not create raw endpoint: %s", err.String())
+		log.Error().Msgf("Could not create raw endpoint: %s", err.String())
 		return errors.New(err.String())
 	}
 	if err := ep.Bind(tcpip.FullAddress{}); err != nil {
-		log.Debug().Msgf("Could not bind raw endpoint: %s", err.String())
+		log.Error().Msgf("Could not bind raw endpoint: %s", err.String())
 		return errors.New(err.String())
 	}
 
@@ -44,7 +44,7 @@ func StartResponder(s *stack.Stack, conn quic.Connection) error {
 			_, err := ep.Read(&buf, tcpip.ReadOptions{})
 			if err != nil {
 				if _, ok := err.(*tcpip.ErrWouldBlock); !ok {
-					log.Debug().Msgf("icmp responder error: %v", err)
+					log.Error().Msgf("icmp responder error: %v", err)
 				}
 				continue
 			}
@@ -67,7 +67,7 @@ func StartResponder(s *stack.Stack, conn quic.Connection) error {
 				continue
 			}
 			h := header.ICMPv4(v)
-			log.Debug().Msgf("received icmp[type=%d code=%d] flow from %s to %s", h.Type(), h.Code(), neth.SourceAddress().String(), neth.DestinationAddress())
+			log.Info().Msgf("received icmp[type=%d code=%d] flow from %s to %s", h.Type(), h.Code(), neth.SourceAddress().String(), neth.DestinationAddress())
 
 			// if h.Type() == header.ICMPv4Echo {
 			// 	iph := header.IPv4(packetbuff.NetworkHeader().Slice())

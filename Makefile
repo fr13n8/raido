@@ -56,15 +56,15 @@ clean:
 
 ## proto_update: Update proto files
 proto_update:
-	buf dep update ./service/proto
+	buf dep update ./proto
 
 ## proto_gen: Generate proto files
 proto_gen:
-	buf generate ./service/proto
+	buf generate ./proto
 
 ## proto_lint: Lint proto files
 proto_lint:
-	buf lint ./service/proto
+	buf lint ./proto
 
 # reference:  https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 ## help: Print this message

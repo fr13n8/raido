@@ -2,16 +2,16 @@
 version: v2
 
 modules:
-  - path: service/proto
+  - path: proto/service
 
 lint:
   use:
     - STANDARD
   ignore_only:
     PACKAGE_DIRECTORY_MATCH:
-      - service.proto
+      - proto/service/service.proto
     PACKAGE_VERSION_SUFFIX:
-      - service.proto
+      - proto/service/service.proto
 breaking:
   use:
     - FILE

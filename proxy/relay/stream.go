@@ -65,7 +65,7 @@ func unidirectionalStream(dst WriterCloser, src Reader, dir string, status *bidi
 
 	_, err := copyData(dst, src, dir)
 	if err != nil && !IsOKNetworkError(err) {
-		log.Debug().Msgf("error during %s copy: %v", dir, err)
+		log.Error().Msgf("error during %s copy: %v", dir, err)
 	}
 	status.markUniStreamDone()
 }

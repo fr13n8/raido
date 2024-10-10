@@ -2,10 +2,9 @@ package netstack
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/quic-go/quic-go"
-	"github.com/rs/zerolog/log"
-	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -31,8 +30,7 @@ func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn quic.Conne
 	})
 
 	// Get the next NIC ID from the stack.
-	// nicID := s.NextNICID()
-	nicID := tcpip.NICID(1)
+	nicID := s.NextNICID()
 
 	// Define the configuration options.
 	options := []Option{
@@ -55,8 +53,7 @@ func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn quic.Conne
 	// Apply the options and return any errors encountered.
 	for _, opt := range options {
 		if err := opt(s); err != nil {
-			log.Error().Err(err).Msg("option failed")
-			return nil, err // Return error instead of logging fatally.
+			return nil, fmt.Errorf("failed to apply option: %w", err) // Return error instead of logging fatally.
 		}
 	}
 

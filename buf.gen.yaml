@@ -3,15 +3,15 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: github.com/fr13n8/raido/service/proto
+      value: github.com/fr13n8/raido/proto/service
 plugins:
   - remote: buf.build/protocolbuffers/go
-    out: service/proto
+    out: proto/service
     opt: paths=source_relative
   - remote: buf.build/connectrpc/go
-    out: service/proto
+    out: proto/service
     opt: paths=source_relative
 inputs:
   - directory: .
     paths:
-      - service/proto/
+      - proto/service

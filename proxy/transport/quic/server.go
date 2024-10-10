@@ -2,12 +2,10 @@ package quic
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
 	"runtime"
-	"time"
 
 	"github.com/fr13n8/raido/agent"
 	"github.com/fr13n8/raido/config"
@@ -20,7 +18,6 @@ import (
 
 type Server struct {
 	config       *config.ProxyServer
-	tlsConfig    *tls.Config
 	listener     *quic.Listener
 	agentManager *agent.Manager
 	connCh       chan quic.Connection
@@ -28,39 +25,13 @@ type Server struct {
 }
 
 func NewServer(conf *config.ProxyServer) (*Server, error) {
-	tlsCert, err := tls.LoadX509KeyPair(conf.TLSConfig.CertFile, conf.TLSConfig.KeyFile)
+	quicListener, err := quic.ListenAddr(conf.Address, conf.TLSConfig, qConf)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to load TLS certificates")
-		return nil, err
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{tlsCert},
-		NextProtos:   []string{protocol.Name},
-		ServerName:   conf.TLSConfig.ServerName,
-	}
-
-	quicListener, err := quic.ListenAddr(conf.Address, tlsConfig, &quic.Config{
-		HandshakeIdleTimeout:       5 * time.Second,
-		MaxIdleTimeout:             5 * time.Second,
-		KeepAlivePeriod:            1 * time.Second,
-		MaxIncomingStreams:         1 << 60,
-		MaxIncomingUniStreams:      -1,
-		DisablePathMTUDiscovery:    false,
-		MaxConnectionReceiveWindow: 30 * (1 << 20), // 30 MB
-		MaxStreamReceiveWindow:     6 * (1 << 20),  // 6 MB
-		// InitialPacketSize:          1252,           //TODO
-		Versions: []quic.Version{quic.Version2},
-		// Tracer:   NewClientTracer(&log.Logger, 1),
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("failed to create QUIC listener")
-		return nil, err
+		return nil, fmt.Errorf("could not listen on QUIC address: %w", err)
 	}
 
 	return &Server{
 		config:       conf,
-		tlsConfig:    tlsConfig,
 		listener:     quicListener,
 		agentManager: agent.NewAgentManager(),
 		connCh:       make(chan quic.Connection),
@@ -70,6 +41,7 @@ func NewServer(conf *config.ProxyServer) (*Server, error) {
 
 func (s *Server) ShutdownGracefully(ctx context.Context) error {
 	log.Info().Msg("shutting down proxy server gracefully...")
+	defer close(s.connCh)
 	var errs []error
 
 	agents := s.agentManager.GetAgents()
@@ -77,7 +49,13 @@ func (s *Server) ShutdownGracefully(ctx context.Context) error {
 		if err := a.CloseTunnel(); err != nil {
 			errs = append(errs, err)
 		}
-		a.Conn.CloseWithError(protocol.ApplicationOK, "server closing down")
+		if err := a.Conn.CloseWithError(protocol.ApplicationOK, "server closing down"); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := s.listener.Close(); err != nil {
+		errs = append(errs, err)
 	}
 
 	if len(errs) > 0 {
@@ -93,7 +71,8 @@ func (s *Server) Listen(ctx context.Context) error {
 
 	// Connection processing goroutine
 	g.Go(func() error {
-		return s.ProcessConnection(ctx)
+		s.ProcessConnection(ctx)
+		return nil
 	})
 
 	// Connection accepting goroutine
@@ -122,14 +101,11 @@ func (s *Server) Listen(ctx context.Context) error {
 	// Shutdown listener when context is done
 	g.Go(func() error {
 		<-ctx.Done()
-		shutdownCtx, stop := context.WithTimeout(context.Background(), 5*time.Second) // Set a timeout for graceful shutdown
+		shutdownCtx, stop := context.WithTimeout(context.Background(), config.ShutdownTimeout) // Set a timeout for graceful shutdown
 		defer stop()
 
-		close(s.connCh)
-
 		if err := s.ShutdownGracefully(shutdownCtx); err != nil {
-			log.Error().Err(err).Msg("shutdown error")
-			return err
+			return fmt.Errorf("shutdown error: %w", err)
 		}
 
 		return nil
@@ -138,7 +114,7 @@ func (s *Server) Listen(ctx context.Context) error {
 	return g.Wait()
 }
 
-func (s *Server) ProcessConnection(ctx context.Context) error {
+func (s *Server) ProcessConnection(ctx context.Context) {
 	sem := make(chan struct{}, s.workerLimit) // Semaphore to limit goroutines
 
 	for conn := range s.connCh {
@@ -148,8 +124,6 @@ func (s *Server) ProcessConnection(ctx context.Context) error {
 			s.StartHandshake(ctx, conn)
 		}(conn)
 	}
-
-	return nil
 }
 
 func (s *Server) StartHandshake(ctx context.Context, conn quic.Connection) {

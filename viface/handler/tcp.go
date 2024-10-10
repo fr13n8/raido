@@ -31,7 +31,7 @@ func TCP(ctx context.Context, conn quic.Connection, fr *tcp.ForwarderRequest) {
 
 	// Get the flow info (source and destination addresses and ports).
 	s := fr.ID()
-	log.Debug().Msgf("received TCP flow from %s to %s",
+	log.Info().Msgf("received TCP flow from %s to %s",
 		net.JoinHostPort(s.RemoteAddress.String(), fmt.Sprint(s.RemotePort)),
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 

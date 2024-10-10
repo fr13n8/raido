@@ -30,13 +30,11 @@ func NewLinkTun() (*LinkTun, error) {
 			log.Info().Msgf("interface \"%s\" already exists. Will reuse.", link.Attrs().Name)
 			return &LinkTun{link}, nil
 		}
-		log.Error().Msgf("error link add: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to add interface: %w", err)
 	}
 
 	if err := netlink.LinkSetUp(link); err != nil {
-		log.Error().Msgf("error bringing up interface: \"%s\"", link.Attrs().Name)
-		return nil, err
+		return nil, fmt.Errorf("failed to bring up interface \"%s\": %w", link.Attrs().Name, err)
 	}
 
 	return &LinkTun{link}, nil
@@ -46,12 +44,10 @@ func GetLinkTunByName(name string) (*LinkTun, error) {
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		if errors.As(err, &netlink.LinkNotFoundError{}) {
-			log.Debug().Err(os.ErrNotExist).Msgf("interface \"%s\" does not exist", name)
-			return nil, os.ErrNotExist
+			return nil, fmt.Errorf("interface \"%s\" does not exist", name)
 		}
 
-		log.Debug().Err(err).Msgf("error when check if interface \"%s\" exist", name)
-		return nil, err
+		return nil, fmt.Errorf("failed to get interface by name: %w", err)
 	}
 
 	return &LinkTun{link}, nil
@@ -60,7 +56,7 @@ func GetLinkTunByName(name string) (*LinkTun, error) {
 func (l *LinkTun) RemoveRoute(address string) error {
 	ns, err := parseNetAddress(address)
 	if err != nil {
-		return err
+		return fmt.Errorf("error parse route: %w", err)
 	}
 
 	return l.removeRoute(ns)
@@ -69,15 +65,14 @@ func (l *LinkTun) RemoveRoute(address string) error {
 func (l *LinkTun) AddRoute(address string) error {
 	ns, err := parseNetAddress(address)
 	if err != nil {
-		return err
+		return fmt.Errorf("error parse route: %w", err)
 	}
 
 	if err := netlink.RouteAdd(&netlink.Route{
 		LinkIndex: l.link.Attrs().Index,
 		Dst:       ns.Network,
 	}); err != nil && !errors.Is(err, syscall.EEXIST) && !errors.Is(err, syscall.EAFNOSUPPORT) {
-		log.Debug().Err(err).Msg("netlink add unreachable route:")
-		return err
+		return fmt.Errorf("error netlink add route: %w", err)
 	}
 
 	return nil
@@ -89,8 +84,7 @@ func (l *LinkTun) Close() error {
 
 func (l *LinkTun) SetMTU(mtu int) error {
 	if err := netlink.LinkSetMTU(l.link, mtu); err != nil {
-		log.Error().Err(err).Msgf("error setting MTU on interface: \"%s\"", l.link.Attrs().Name)
-		return err
+		return fmt.Errorf("error setting MTU on interface: \"%s\": %w", l.link.Attrs().Name, err)
 	}
 
 	return nil
@@ -98,8 +92,7 @@ func (l *LinkTun) SetMTU(mtu int) error {
 
 func (l *LinkTun) DOWN() error {
 	if err := netlink.LinkSetDown(l.link); err != nil {
-		log.Error().Err(err).Msgf("failed to DOWN interface \"%s\"", l.link.Attrs().Name)
-		return err
+		return fmt.Errorf("failed to DOWN interface \"%s\": %w", l.link.Attrs().Name, err)
 	}
 
 	return nil
@@ -107,8 +100,7 @@ func (l *LinkTun) DOWN() error {
 
 func (l *LinkTun) Destroy() error {
 	if err := netlink.LinkDel(l.link); err != nil {
-		log.Debug().Err(err).Msgf("failed to delete interface \"%s\"", l.link.Attrs().Name)
-		return err
+		return fmt.Errorf("failed to delete interface \"%s\": %w", l.link.Attrs().Name, err)
 	}
 
 	return nil
@@ -117,19 +109,16 @@ func (l *LinkTun) Destroy() error {
 func Destroy(name string) error {
 	l, err := GetLinkTunByName(name)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to get interface \"%s\"", name)
-		return err
+		return fmt.Errorf("failed to get interface \"%s\": %w", name, err)
 	}
 
 	link, err := netlink.LinkByName(l.link.Attrs().Name)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to get interface by name \"%s\"", l.link.Attrs().Name)
-		return err
+		return fmt.Errorf("failed to get interface by name \"%s\": %w", l.link.Attrs().Name, err)
 	}
 
 	if err := netlink.LinkDel(link); err != nil {
-		log.Debug().Err(err).Msgf("failed to delete interface \"%s\"", l.link.Attrs().Name)
-		return err
+		return fmt.Errorf("failed to delete interface \"%s\": %w", l.link.Attrs().Name, err)
 	}
 
 	return nil
@@ -142,8 +131,7 @@ func (l *LinkTun) removeRoute(address NetAddress) error {
 	}
 
 	if err := netlink.RouteDel(route); err != nil && !errors.Is(err, syscall.ESRCH) && !errors.Is(err, syscall.EAFNOSUPPORT) {
-		log.Debug().Err(err).Msg("error netlink remove route")
-		return err
+		return fmt.Errorf("error netlink remove route: %w", err)
 	}
 
 	return nil
@@ -157,7 +145,6 @@ type NetAddress struct {
 func parseNetAddress(address string) (NetAddress, error) {
 	ip, network, err := net.ParseCIDR(address)
 	if err != nil {
-		log.Debug().Err(err).Msg("error parse route")
 		return NetAddress{}, err
 	}
 	return NetAddress{
@@ -174,8 +161,7 @@ func (addr NetAddress) String() string {
 func GetTunTaps() ([]LinkTun, error) {
 	tuns, err := netlink.LinkList()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get link list")
-		return nil, err
+		return nil, fmt.Errorf("failed to get link list: %w", err)
 	}
 	var tuntaps []LinkTun
 	for _, link := range tuns {
@@ -192,15 +178,14 @@ func (l *LinkTun) Name() string {
 	return l.link.Attrs().Name
 }
 
-func (l *LinkTun) Routes() map[string]netlink.Route {
+func (l *LinkTun) Routes() (map[string]netlink.Route, error) {
 	routes, err := netlink.RouteList(l.link, netlink.FAMILY_ALL)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get route list")
-		return nil
+		return nil, fmt.Errorf("failed to get route list: %w", err)
 	}
 	tapRoutes := make(map[string]netlink.Route)
 	for _, route := range routes {
 		tapRoutes[route.Dst.String()] = route
 	}
-	return tapRoutes
+	return tapRoutes, nil
 }

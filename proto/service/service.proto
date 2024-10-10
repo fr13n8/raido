@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package service;
+
+service RaidoService {
+  rpc ProxyStart(ProxyStartRequest) returns (ProxyStartResponse) {}
+  rpc ProxyStop(ProxyStopRequest) returns (ProxyStopResponse) {}
+
+  rpc GetAgents(GetAgentsRequest) returns (GetAgentsResponse) {}
+  rpc AgentTunnelStart(AgentTunnelStartRequest) returns (AgentTunnelStartResponse) {}
+  rpc AgentTunnelStop(AgentTunnelStopRequest) returns (AgentTunnelStopResponse) {}
+}
+
+message ProxyStopRequest {}
+
+message ProxyStopResponse {}
+
+message ProxyStartRequest {
+  string proxy_address = 1;
+}
+
+message ProxyStartResponse {
+  bytes cert_hash = 1;
+}
+
+message GetAgentsRequest {}
+
+message GetAgentsResponse {
+  map<string, Agent> agents = 1;
+}
+
+message Agent {
+  string name = 1;
+  repeated string routes = 2;
+  bool status = 3;
+}
+
+message AgentTunnelStartRequest {
+  string token = 1;
+  string agent_id = 2;
+}
+
+message AgentTunnelStartResponse {
+  string tunnel_id = 1;
+}
+
+message AgentTunnelStopRequest {
+  string agent_id = 1;
+}
+
+message AgentTunnelStopResponse {
+  string tunnel_id = 1;
+}
+

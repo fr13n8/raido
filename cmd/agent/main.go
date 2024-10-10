@@ -1,13 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/transport/quic"
 
 	"github.com/fr13n8/raido/config"
@@ -18,9 +25,8 @@ import (
 func main() {
 	flagSet := flag.NewFlagSet("agent", flag.ExitOnError)
 	proxyAddress := flagSet.String("pa", "", "relay address to connect to (e.g., 192.168.100.7:3333)")
-	verbose := flagSet.Bool("v", false, "enable verbose mode")
-	insecureSkipVerify := flagSet.Bool("sv", true, "skip TLS certficate verification")
-	// CACertificatePath := flagSet.String("cp", "", "path to TLS CA certificate PEM file")
+	insecureSkipVerify := flagSet.Bool("isk", false, "skip TLS certficate verification")
+	certHash := flagSet.String("ch", "", "certificate hash for accepting self-signed certificates")
 
 	flagSet.Usage = func() {
 		fmt.Fprintln(os.Stderr, `Start agent.
@@ -45,21 +51,36 @@ Flags:`)
 		// TimeFormat: time.RFC3339,
 	})
 
-	if *verbose {
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	}
-
 	if *proxyAddress == "" {
-		log.Fatal().Msg("please, specify the relay server listen address -pa host:port")
+		log.Fatal().Msg("please, specify the proxy server listen address -pa host:port")
 	}
 
-	tlsConfig := &config.TLSConfig{
-		// CAFile:             *CACertificatePath,
-		ServerName:         "localhost",
+	host, _, err := net.SplitHostPort(*proxyAddress)
+	if err != nil {
+		log.Fatal().Err(err).Msg("invalid proxy address, please use host:port")
+	}
+	tlsConfig := &tls.Config{
+		MinVersion:         tls.VersionTLS13,
+		NextProtos:         []string{protocol.Name},
+		ServerName:         host,
 		InsecureSkipVerify: *insecureSkipVerify,
 	}
+	if *certHash != "" {
+		tlsConfig.InsecureSkipVerify = true
+		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			crtFingerprint := sha256.Sum256(rawCerts[0])
+			crtMatch, err := hex.DecodeString(*certHash)
+			if err != nil {
+				return fmt.Errorf("failed to decode certificate hash: %w", err)
+			}
+			if bytes.Compare(crtMatch, crtFingerprint[:]) != 0 {
+				return fmt.Errorf("certificate hash mismatch %x != %x", crtMatch, crtFingerprint[:])
+			}
+			return nil
+		}
+	}
 
-	dialerConf := &config.Dialer{
+	dialerConf := &config.ProxyDialer{
 		ProxyAddress: *proxyAddress,
 		TLSConfig:    tlsConfig,
 	}
@@ -70,10 +91,7 @@ Flags:`)
 		stop()
 	}()
 
-	d, err := quic.NewDialer(ctx, dialerConf)
-	if err != nil {
-		log.Fatal().Err(err).Msg("create dialer error")
-	}
+	d := quic.NewDialer(ctx, dialerConf)
 
 	// go func() {
 	// 	http.Handle("/prometheus", promhttp.Handler())
@@ -81,7 +99,7 @@ Flags:`)
 	// }()
 
 	if err := d.Run(ctx); err != nil {
-		log.Error().Err(err).Send()
+		log.Error().Err(err).Msgf("failed to run dialer")
 		return
 	}
 

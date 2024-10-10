@@ -16,12 +16,6 @@ var (
 		Use:          "raido",
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			verbose, err := cmd.Flags().GetBool("verbose")
-			if err != nil {
-				log.Error().Err(err).Msg("failed to parse log level")
-				return err
-			}
-
 			log.Logger = log.Output(zerolog.ConsoleWriter{
 				Out: os.Stderr,
 				FormatTimestamp: func(i interface{}) string {
@@ -33,15 +27,16 @@ var (
 				zerolog.SetGlobalLevel(zerolog.TraceLevel)
 			}
 
-			return err
+			return nil
 		},
 	}
 )
 
 func init() {
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable verbose mode")
+	rootCmd.PersistentFlags().BoolVar(&verbose, "v", false, "enable verbose mode")
 	rootCmd.AddCommand(serviceCmd)
-	rootCmd.AddCommand(sessionCmd)
+	rootCmd.AddCommand(agentCmd)
+	rootCmd.AddCommand(proxyCmd)
 }
 
 func main() {
@@ -59,6 +54,6 @@ func main() {
 	}()
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		os.Exit(1)
+		log.Error().Err(err).Msg("failed to execute command")
 	}
 }

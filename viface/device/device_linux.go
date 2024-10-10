@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/unix"
 	"gvisor.dev/gvisor/pkg/rawfile"
 	"gvisor.dev/gvisor/pkg/tcpip/link/fdbased"
@@ -25,22 +24,19 @@ type NetTun struct {
 // Open initializes the TUN device, retrieves the MTU, and creates the LinkEndpoint.
 func Open(name string) (TUNDevice, error) {
 	if len(name) >= unix.IFNAMSIZ {
-		log.Error().Msgf("interface name too long: \"%s\"", name)
 		return nil, fmt.Errorf("interface name too long: \"%s\"", name)
 	}
 
 	// Retrieve the MTU of the network interface.
 	_mtu, err := rawfile.GetMTU(name)
 	if err != nil {
-		log.Error().Err(err).Msgf("get mtu of \"%s\" error", name)
-		return nil, err
+		return nil, fmt.Errorf("failed to get MTU of interface \"%s\": %w", name, err)
 	}
 
 	// Open the TUN device file descriptor.
 	fd, err := tun.Open(name)
 	if err != nil {
-		log.Error().Err(err).Msgf("open TUN interface error \"%s\"", name)
-		return nil, err
+		return nil, fmt.Errorf("failed to open TUN interface \"%s\": %w", name, err)
 	}
 
 	// Create a new LinkEndpoint using the fdbased package, setting options for performance.
@@ -52,10 +48,9 @@ func Open(name string) (TUNDevice, error) {
 		// GSOMaxSize:         65536,            // Enable GSO to batch packets for higher throughput.
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("create endpoint error")
 		// Ensure the fd is closed on error.
 		unix.Close(fd)
-		return nil, err
+		return nil, fmt.Errorf("failed to create link endpoint: %w", err)
 	}
 
 	return &NetTun{
