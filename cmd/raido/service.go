@@ -106,6 +106,7 @@ func (p *program) Start(svc service.Service) error {
 func (p *program) Stop(srv service.Service) error {
 	p.cancel()
 
+	// Wait for the all services to stop
 	time.Sleep(config.ShutdownTimeout)
 	log.Info().Msg("service stopped")
 	return nil

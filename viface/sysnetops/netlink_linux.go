@@ -85,10 +85,6 @@ func (l *LinkTun) AddRoute(address string) error {
 	return nil
 }
 
-func (l *LinkTun) Close() error {
-	return netlink.LinkDel(l.link)
-}
-
 func (l *LinkTun) SetMTU(mtu int) error {
 	if err := netlink.LinkSetMTU(l.link, mtu); err != nil {
 		return fmt.Errorf("error setting MTU on interface: \"%s\": %w", l.link.Attrs().Name, err)
@@ -197,6 +193,9 @@ func (l *LinkTun) Routes() (map[string]netlink.Route, error) {
 	return tapRoutes, nil
 }
 
+//	mkdir -p /dev/net && \
+//	    mknod /dev/net/tun c 10 200 && \
+//	    chmod 600 /dev/net/tun
 func createTunDevice() error {
 	// Create the /dev/net directory if it doesn't exist
 	err := os.MkdirAll("/dev/net", 0755)

@@ -168,7 +168,8 @@ func (s *Server) StartHandshake(ctx context.Context, conn quic.Connection) {
 
 	// Add the new agent to the agent manager
 	agentiId := shortuuid.New()
-	s.agentManager.AddAgent(agentiId, agent.New(dec.Name, conn, routes))
+	a := agent.New(dec.Name, conn, routes)
+	s.agentManager.AddAgent(agentiId, a)
 
 	go func() {
 		for {
@@ -178,7 +179,12 @@ func (s *Server) StartHandshake(ctx context.Context, conn quic.Connection) {
 				if errors.As(err, &appErr) {
 					if appErr.ErrorCode == protocol.ApplicationOK {
 						log.Info().Str("agent_id", agentiId).Msg("agent closed connection")
+
 						s.agentManager.RemoveAgent(agentiId)
+						if err := a.CloseTunnel(); err != nil {
+							log.Error().Err(err).Msg("failed to close tunnel")
+						}
+
 						return
 					}
 				}
