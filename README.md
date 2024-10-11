@@ -54,27 +54,35 @@ proxy ❯❯ raido --help      # help options
 proxy ❯❯ raido service run # for foreground mode
 ```
 
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/run.gif">
+
 Or you can install raido as daemon and start it.
 
 ```bash
-proxy ❯❯ raido service install   # install raido.service
-proxy ❯❯ raido service start     # start raido in daemon mode
-proxy ❯❯ raido service status    # check raido.service status
-proxy ❯❯ raido service uninstall # uninstall raido.service
+proxy ❯❯ raido service --help  # servie help options
+proxy ❯❯ raido service install # install raido.service
+proxy ❯❯ raido service start   # start raido in daemon mode
+proxy ❯❯ raido service status  # check raido.service status
 ```
+
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/service.gif">
 
 ### Start the raido proxy server
 
 ```bash
 proxy ❯❯ raido proxy start # start proxy server by default on address 0.0.0.0:8787
-INF proxy started with cert hash: 5AE8BB04B096A6913A4EA45C35537355B82DB66DE40E201681F111CCDED73FFB
+INF proxy started with cert hash: 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC1267E087C4D4B24743996
 ```
+
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/proxy.gif">
 
 ### Start agent on remote server
 
 ```bash
-agent ❯❯ agent -pa 10.1.0.3:8787 -ch 5AE8BB04B096A6913A4EA45C35537355B82DB66DE40E201681F111CCDED73FFB
+agent ❯❯ agent -pa 10.1.0.2:8787 -ch 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC1267E087C4D4B24743996
 ```
+
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent.gif">
 
 ### Check all connected agents
 
@@ -83,27 +91,31 @@ proxy ❯❯ raido agent list # print all agents and their available routes in a
 ┌───┬────────────────────────┬───────────────────┬─────────────┐
 │ № │           ID           │     Hostname      │   Routes    │
 ├───┼────────────────────────┼───────────────────┼─────────────┤
-│ 1 │ LMD6Ycek8Rz6pXxL4kzLM8 │ root@1e28e066f43a │ 10.2.0.3/16 │
-│   │                        │                   │ 10.3.0.3/16 │
-│   │                        │                   │ 10.4.0.3/16 │
+│ 1 │ R6QXeSMXTL2attGG8YEsr6 │ root@99e5d6f726b5 │ 10.2.0.3/16 │
+│   │                        │                   │ 10.1.0.3/16 │
 └───┴────────────────────────┴───────────────────┴─────────────┘
 ```
+
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent_list.gif">
 
 ### Start tunneling to agent
 
 ```bash
-proxy ❯❯ raido tunnel start --agent-id LMD6Ycek8Rz6pXxL4kzLM8 # the command creates the tun interface and adds all routes
+proxy ❯❯ raido tunnel start --agent-id R6QXeSMXTL2attGG8YEsr6 # the command creates the tun interface and adds all routes
 proxy ❯❯ raido tunnel list
-┌───┬────────────────────────┬─────────┬─────────────┬──────┐
-│ № │        Agent ID        │Interface│   Routes    │Status│
-├───┼────────────────────────┼─────────┼─────────────┼──────┤
-│ 1 │ LMD6Ycek8Rz6pXxL4kzLM8 │ raido0  │ 10.2.0.3/16 │ up   │
-│   │                        │         │ 10.3.0.3/16 │      │
-│   │                        │         │ 10.4.0.3/16 │      │
-└───┴────────────────────────┴─────────┴─────────────┴──────┘
+┌───┬────────────────────────┬───────────────────┬─────────────┐
+│ № │           ID           │     Hostname      │   Routes    │
+├───┼────────────────────────┼───────────────────┼─────────────┤
+│ 1 │ R6QXeSMXTL2attGG8YEsr6 │ root@99e5d6f726b5 │ 10.2.0.3/16 │
+│   │                        │                   │ 10.1.0.3/16 │
+└───┴────────────────────────┴───────────────────┴─────────────┘
 ```
 
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/tunnel.gif">
+
 That's it, now you can send requests directly to these addresses.
+
+<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/result.gif">
 
 ## TODO
 
