@@ -54,7 +54,7 @@ proxy ❯❯ raido --help      # help options
 proxy ❯❯ raido service run # for foreground mode
 ```
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/run.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/run.gif">
 
 Or you can install raido as daemon and start it.
 
@@ -65,7 +65,7 @@ proxy ❯❯ raido service start   # start raido in daemon mode
 proxy ❯❯ raido service status  # check raido.service status
 ```
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/service.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/service.gif">
 
 ### Start the raido proxy server
 
@@ -74,7 +74,7 @@ proxy ❯❯ raido proxy start # start proxy server by default on address 0.0.0.
 INF proxy started with cert hash: 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC1267E087C4D4B24743996
 ```
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/proxy.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/proxy.gif">
 
 ### Start agent on remote server
 
@@ -82,7 +82,7 @@ INF proxy started with cert hash: 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC126
 agent ❯❯ agent -pa 10.1.0.2:8787 -ch 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC1267E087C4D4B24743996
 ```
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent.gif">
 
 ### Check all connected agents
 
@@ -96,7 +96,7 @@ proxy ❯❯ raido agent list # print all agents and their available routes in a
 └───┴────────────────────────┴───────────────────┴─────────────┘
 ```
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent_list.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent_list.gif">
 
 ### Start tunneling to agent
 
@@ -111,11 +111,11 @@ proxy ❯❯ raido tunnel list
 └───┴────────────────────────┴───────────────────┴─────────────┘
 ```
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/tunnel.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/tunnel.gif">
 
 That's it, now you can send requests directly to these addresses.
 
-<img width="600" alt="Example of pressing the arrow keys to navigate text" src="./doc/result.gif">
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/result.gif">
 
 ## TODO
 
