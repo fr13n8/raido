@@ -4,16 +4,25 @@ package service;
 
 service RaidoService {
   rpc ProxyStart(ProxyStartRequest) returns (ProxyStartResponse) {}
-  rpc ProxyStop(ProxyStopRequest) returns (ProxyStopResponse) {}
+  rpc ProxyStop(Empty) returns (Empty) {}
 
-  rpc GetAgents(GetAgentsRequest) returns (GetAgentsResponse) {}
-  rpc AgentTunnelStart(AgentTunnelStartRequest) returns (AgentTunnelStartResponse) {}
-  rpc AgentTunnelStop(AgentTunnelStopRequest) returns (AgentTunnelStopResponse) {}
+  rpc AgentList(Empty) returns (AgentListResponse) {}
+  rpc AgentRemove(AgentRemoveRequest) returns (Empty) {}
+
+  rpc TunnelList(Empty) returns (TunnelListResponse) {}
+  rpc TunnelStart(TunnelStartRequest) returns (Empty) {}
+  rpc TunnelStop(TunnelStopRequest) returns (Empty) {}
+  rpc TunnelPause(TunnelPauseRequest) returns (Empty) {}
+  rpc TunnelResume(TunnelResumeRequest) returns (Empty) {}
+  rpc TunnelAddRoute(TunnelAddRouteRequest) returns (Empty) {}
+  rpc TunnelRemoveRoute(TunnelRemoveRouteRequest) returns (Empty) {}
 }
 
-message ProxyStopRequest {}
+message Empty {}
 
-message ProxyStopResponse {}
+message AgentRemoveRequest {
+  string agent_id = 1;
+}
 
 message ProxyStartRequest {
   string proxy_address = 1;
@@ -23,32 +32,49 @@ message ProxyStartResponse {
   bytes cert_hash = 1;
 }
 
-message GetAgentsRequest {}
-
-message GetAgentsResponse {
+message AgentListResponse {
   map<string, Agent> agents = 1;
 }
 
 message Agent {
   string name = 1;
   repeated string routes = 2;
-  bool status = 3;
 }
 
-message AgentTunnelStartRequest {
-  string token = 1;
-  string agent_id = 2;
+message TunnelListResponse {
+  repeated Tunnel tunnels = 1;
 }
 
-message AgentTunnelStartResponse {
-  string tunnel_id = 1;
+message Tunnel {
+  string agent_id = 1;
+  repeated string routes = 2;
+  string status = 3;
+  string interface = 4;
 }
 
-message AgentTunnelStopRequest {
+message TunnelStartRequest {
+  string agent_id = 1;
+  repeated string routes = 2;
+}
+
+message TunnelStopRequest {
   string agent_id = 1;
 }
 
-message AgentTunnelStopResponse {
-  string tunnel_id = 1;
+message TunnelPauseRequest {
+  string agent_id = 1;
 }
 
+message TunnelResumeRequest {
+  string agent_id = 1;
+}
+
+message TunnelAddRouteRequest {
+  string agent_id = 1;
+  repeated string routes = 2;
+}
+
+message TunnelRemoveRouteRequest {
+  string agent_id = 1;
+  repeated string routes = 2;
+}

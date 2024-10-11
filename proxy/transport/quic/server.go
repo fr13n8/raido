@@ -45,13 +45,15 @@ func (s *Server) ShutdownGracefully(ctx context.Context) error {
 	var errs []error
 
 	agents := s.agentManager.GetAgents()
-	for _, a := range agents {
+	for id, a := range agents {
 		if err := a.CloseTunnel(); err != nil {
 			errs = append(errs, err)
 		}
 		if err := a.Conn.CloseWithError(protocol.ApplicationOK, "server closing down"); err != nil {
 			errs = append(errs, err)
 		}
+
+		s.agentManager.RemoveAgent(id)
 	}
 
 	if err := s.listener.Close(); err != nil {

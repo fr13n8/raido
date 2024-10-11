@@ -61,6 +61,7 @@ var (
 func init() {
 	proxyStartCmd.Flags().StringVar(&proxyAddr, "proxy-addr", "0.0.0.0:8787", "Proxy listen address (e.g., :8787)")
 
-	proxyCmd.AddCommand(proxyStartCmd)
-	proxyCmd.AddCommand(proxyStopCmd)
+	proxyCmd.AddCommand(
+		proxyStartCmd, proxyStopCmd,
+	)
 }

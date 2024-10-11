@@ -21,10 +21,10 @@ var (
 				return
 			}
 
-			if err := s.Stop(); err != nil {
-				log.Error().Err(err).Msg("failed to stop service")
-				return
-			}
+			// if err := s.Stop(); err != nil {
+			// 	log.Error().Err(err).Msg("failed to stop service")
+			// 	return
+			// }
 
 			if err := s.Uninstall(); err != nil {
 				log.Error().Err(err).Msg("failed to uninstall service")

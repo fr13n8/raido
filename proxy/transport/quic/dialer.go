@@ -62,7 +62,7 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 			stream, err := conn.AcceptStream(ctx)
 			if err != nil {
 				var appErr *quic.ApplicationError
-				if errors.As(err, &appErr) || errors.Is(err, context.Canceled) {
+				if errors.As(err, &appErr) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					log.Info().Msg("connection closed")
 					break
 				}

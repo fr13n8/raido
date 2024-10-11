@@ -12,6 +12,12 @@ lint:
       - proto/service/service.proto
     PACKAGE_VERSION_SUFFIX:
       - proto/service/service.proto
+    RPC_REQUEST_STANDARD_NAME:
+      - proto/service/service.proto 
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - proto/service/service.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - proto/service/service.proto 
 breaking:
   use:
     - FILE

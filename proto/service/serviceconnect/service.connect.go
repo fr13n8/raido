@@ -37,33 +37,61 @@ const (
 	RaidoServiceProxyStartProcedure = "/service.RaidoService/ProxyStart"
 	// RaidoServiceProxyStopProcedure is the fully-qualified name of the RaidoService's ProxyStop RPC.
 	RaidoServiceProxyStopProcedure = "/service.RaidoService/ProxyStop"
-	// RaidoServiceGetAgentsProcedure is the fully-qualified name of the RaidoService's GetAgents RPC.
-	RaidoServiceGetAgentsProcedure = "/service.RaidoService/GetAgents"
-	// RaidoServiceAgentTunnelStartProcedure is the fully-qualified name of the RaidoService's
-	// AgentTunnelStart RPC.
-	RaidoServiceAgentTunnelStartProcedure = "/service.RaidoService/AgentTunnelStart"
-	// RaidoServiceAgentTunnelStopProcedure is the fully-qualified name of the RaidoService's
-	// AgentTunnelStop RPC.
-	RaidoServiceAgentTunnelStopProcedure = "/service.RaidoService/AgentTunnelStop"
+	// RaidoServiceAgentListProcedure is the fully-qualified name of the RaidoService's AgentList RPC.
+	RaidoServiceAgentListProcedure = "/service.RaidoService/AgentList"
+	// RaidoServiceAgentRemoveProcedure is the fully-qualified name of the RaidoService's AgentRemove
+	// RPC.
+	RaidoServiceAgentRemoveProcedure = "/service.RaidoService/AgentRemove"
+	// RaidoServiceTunnelListProcedure is the fully-qualified name of the RaidoService's TunnelList RPC.
+	RaidoServiceTunnelListProcedure = "/service.RaidoService/TunnelList"
+	// RaidoServiceTunnelStartProcedure is the fully-qualified name of the RaidoService's TunnelStart
+	// RPC.
+	RaidoServiceTunnelStartProcedure = "/service.RaidoService/TunnelStart"
+	// RaidoServiceTunnelStopProcedure is the fully-qualified name of the RaidoService's TunnelStop RPC.
+	RaidoServiceTunnelStopProcedure = "/service.RaidoService/TunnelStop"
+	// RaidoServiceTunnelPauseProcedure is the fully-qualified name of the RaidoService's TunnelPause
+	// RPC.
+	RaidoServiceTunnelPauseProcedure = "/service.RaidoService/TunnelPause"
+	// RaidoServiceTunnelResumeProcedure is the fully-qualified name of the RaidoService's TunnelResume
+	// RPC.
+	RaidoServiceTunnelResumeProcedure = "/service.RaidoService/TunnelResume"
+	// RaidoServiceTunnelAddRouteProcedure is the fully-qualified name of the RaidoService's
+	// TunnelAddRoute RPC.
+	RaidoServiceTunnelAddRouteProcedure = "/service.RaidoService/TunnelAddRoute"
+	// RaidoServiceTunnelRemoveRouteProcedure is the fully-qualified name of the RaidoService's
+	// TunnelRemoveRoute RPC.
+	RaidoServiceTunnelRemoveRouteProcedure = "/service.RaidoService/TunnelRemoveRoute"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	raidoServiceServiceDescriptor                = service.File_service_proto.Services().ByName("RaidoService")
-	raidoServiceProxyStartMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("ProxyStart")
-	raidoServiceProxyStopMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("ProxyStop")
-	raidoServiceGetAgentsMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("GetAgents")
-	raidoServiceAgentTunnelStartMethodDescriptor = raidoServiceServiceDescriptor.Methods().ByName("AgentTunnelStart")
-	raidoServiceAgentTunnelStopMethodDescriptor  = raidoServiceServiceDescriptor.Methods().ByName("AgentTunnelStop")
+	raidoServiceServiceDescriptor                 = service.File_service_proto.Services().ByName("RaidoService")
+	raidoServiceProxyStartMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("ProxyStart")
+	raidoServiceProxyStopMethodDescriptor         = raidoServiceServiceDescriptor.Methods().ByName("ProxyStop")
+	raidoServiceAgentListMethodDescriptor         = raidoServiceServiceDescriptor.Methods().ByName("AgentList")
+	raidoServiceAgentRemoveMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("AgentRemove")
+	raidoServiceTunnelListMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("TunnelList")
+	raidoServiceTunnelStartMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("TunnelStart")
+	raidoServiceTunnelStopMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("TunnelStop")
+	raidoServiceTunnelPauseMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("TunnelPause")
+	raidoServiceTunnelResumeMethodDescriptor      = raidoServiceServiceDescriptor.Methods().ByName("TunnelResume")
+	raidoServiceTunnelAddRouteMethodDescriptor    = raidoServiceServiceDescriptor.Methods().ByName("TunnelAddRoute")
+	raidoServiceTunnelRemoveRouteMethodDescriptor = raidoServiceServiceDescriptor.Methods().ByName("TunnelRemoveRoute")
 )
 
 // RaidoServiceClient is a client for the service.RaidoService service.
 type RaidoServiceClient interface {
 	ProxyStart(context.Context, *connect.Request[service.ProxyStartRequest]) (*connect.Response[service.ProxyStartResponse], error)
-	ProxyStop(context.Context, *connect.Request[service.ProxyStopRequest]) (*connect.Response[service.ProxyStopResponse], error)
-	GetAgents(context.Context, *connect.Request[service.GetAgentsRequest]) (*connect.Response[service.GetAgentsResponse], error)
-	AgentTunnelStart(context.Context, *connect.Request[service.AgentTunnelStartRequest]) (*connect.Response[service.AgentTunnelStartResponse], error)
-	AgentTunnelStop(context.Context, *connect.Request[service.AgentTunnelStopRequest]) (*connect.Response[service.AgentTunnelStopResponse], error)
+	ProxyStop(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.Empty], error)
+	AgentList(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.AgentListResponse], error)
+	AgentRemove(context.Context, *connect.Request[service.AgentRemoveRequest]) (*connect.Response[service.Empty], error)
+	TunnelList(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.TunnelListResponse], error)
+	TunnelStart(context.Context, *connect.Request[service.TunnelStartRequest]) (*connect.Response[service.Empty], error)
+	TunnelStop(context.Context, *connect.Request[service.TunnelStopRequest]) (*connect.Response[service.Empty], error)
+	TunnelPause(context.Context, *connect.Request[service.TunnelPauseRequest]) (*connect.Response[service.Empty], error)
+	TunnelResume(context.Context, *connect.Request[service.TunnelResumeRequest]) (*connect.Response[service.Empty], error)
+	TunnelAddRoute(context.Context, *connect.Request[service.TunnelAddRouteRequest]) (*connect.Response[service.Empty], error)
+	TunnelRemoveRoute(context.Context, *connect.Request[service.TunnelRemoveRouteRequest]) (*connect.Response[service.Empty], error)
 }
 
 // NewRaidoServiceClient constructs a client for the service.RaidoService service. By default, it
@@ -82,28 +110,64 @@ func NewRaidoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(raidoServiceProxyStartMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		proxyStop: connect.NewClient[service.ProxyStopRequest, service.ProxyStopResponse](
+		proxyStop: connect.NewClient[service.Empty, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceProxyStopProcedure,
 			connect.WithSchema(raidoServiceProxyStopMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getAgents: connect.NewClient[service.GetAgentsRequest, service.GetAgentsResponse](
+		agentList: connect.NewClient[service.Empty, service.AgentListResponse](
 			httpClient,
-			baseURL+RaidoServiceGetAgentsProcedure,
-			connect.WithSchema(raidoServiceGetAgentsMethodDescriptor),
+			baseURL+RaidoServiceAgentListProcedure,
+			connect.WithSchema(raidoServiceAgentListMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		agentTunnelStart: connect.NewClient[service.AgentTunnelStartRequest, service.AgentTunnelStartResponse](
+		agentRemove: connect.NewClient[service.AgentRemoveRequest, service.Empty](
 			httpClient,
-			baseURL+RaidoServiceAgentTunnelStartProcedure,
-			connect.WithSchema(raidoServiceAgentTunnelStartMethodDescriptor),
+			baseURL+RaidoServiceAgentRemoveProcedure,
+			connect.WithSchema(raidoServiceAgentRemoveMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		agentTunnelStop: connect.NewClient[service.AgentTunnelStopRequest, service.AgentTunnelStopResponse](
+		tunnelList: connect.NewClient[service.Empty, service.TunnelListResponse](
 			httpClient,
-			baseURL+RaidoServiceAgentTunnelStopProcedure,
-			connect.WithSchema(raidoServiceAgentTunnelStopMethodDescriptor),
+			baseURL+RaidoServiceTunnelListProcedure,
+			connect.WithSchema(raidoServiceTunnelListMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		tunnelStart: connect.NewClient[service.TunnelStartRequest, service.Empty](
+			httpClient,
+			baseURL+RaidoServiceTunnelStartProcedure,
+			connect.WithSchema(raidoServiceTunnelStartMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		tunnelStop: connect.NewClient[service.TunnelStopRequest, service.Empty](
+			httpClient,
+			baseURL+RaidoServiceTunnelStopProcedure,
+			connect.WithSchema(raidoServiceTunnelStopMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		tunnelPause: connect.NewClient[service.TunnelPauseRequest, service.Empty](
+			httpClient,
+			baseURL+RaidoServiceTunnelPauseProcedure,
+			connect.WithSchema(raidoServiceTunnelPauseMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		tunnelResume: connect.NewClient[service.TunnelResumeRequest, service.Empty](
+			httpClient,
+			baseURL+RaidoServiceTunnelResumeProcedure,
+			connect.WithSchema(raidoServiceTunnelResumeMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		tunnelAddRoute: connect.NewClient[service.TunnelAddRouteRequest, service.Empty](
+			httpClient,
+			baseURL+RaidoServiceTunnelAddRouteProcedure,
+			connect.WithSchema(raidoServiceTunnelAddRouteMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		tunnelRemoveRoute: connect.NewClient[service.TunnelRemoveRouteRequest, service.Empty](
+			httpClient,
+			baseURL+RaidoServiceTunnelRemoveRouteProcedure,
+			connect.WithSchema(raidoServiceTunnelRemoveRouteMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -111,11 +175,17 @@ func NewRaidoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // raidoServiceClient implements RaidoServiceClient.
 type raidoServiceClient struct {
-	proxyStart       *connect.Client[service.ProxyStartRequest, service.ProxyStartResponse]
-	proxyStop        *connect.Client[service.ProxyStopRequest, service.ProxyStopResponse]
-	getAgents        *connect.Client[service.GetAgentsRequest, service.GetAgentsResponse]
-	agentTunnelStart *connect.Client[service.AgentTunnelStartRequest, service.AgentTunnelStartResponse]
-	agentTunnelStop  *connect.Client[service.AgentTunnelStopRequest, service.AgentTunnelStopResponse]
+	proxyStart        *connect.Client[service.ProxyStartRequest, service.ProxyStartResponse]
+	proxyStop         *connect.Client[service.Empty, service.Empty]
+	agentList         *connect.Client[service.Empty, service.AgentListResponse]
+	agentRemove       *connect.Client[service.AgentRemoveRequest, service.Empty]
+	tunnelList        *connect.Client[service.Empty, service.TunnelListResponse]
+	tunnelStart       *connect.Client[service.TunnelStartRequest, service.Empty]
+	tunnelStop        *connect.Client[service.TunnelStopRequest, service.Empty]
+	tunnelPause       *connect.Client[service.TunnelPauseRequest, service.Empty]
+	tunnelResume      *connect.Client[service.TunnelResumeRequest, service.Empty]
+	tunnelAddRoute    *connect.Client[service.TunnelAddRouteRequest, service.Empty]
+	tunnelRemoveRoute *connect.Client[service.TunnelRemoveRouteRequest, service.Empty]
 }
 
 // ProxyStart calls service.RaidoService.ProxyStart.
@@ -124,32 +194,68 @@ func (c *raidoServiceClient) ProxyStart(ctx context.Context, req *connect.Reques
 }
 
 // ProxyStop calls service.RaidoService.ProxyStop.
-func (c *raidoServiceClient) ProxyStop(ctx context.Context, req *connect.Request[service.ProxyStopRequest]) (*connect.Response[service.ProxyStopResponse], error) {
+func (c *raidoServiceClient) ProxyStop(ctx context.Context, req *connect.Request[service.Empty]) (*connect.Response[service.Empty], error) {
 	return c.proxyStop.CallUnary(ctx, req)
 }
 
-// GetAgents calls service.RaidoService.GetAgents.
-func (c *raidoServiceClient) GetAgents(ctx context.Context, req *connect.Request[service.GetAgentsRequest]) (*connect.Response[service.GetAgentsResponse], error) {
-	return c.getAgents.CallUnary(ctx, req)
+// AgentList calls service.RaidoService.AgentList.
+func (c *raidoServiceClient) AgentList(ctx context.Context, req *connect.Request[service.Empty]) (*connect.Response[service.AgentListResponse], error) {
+	return c.agentList.CallUnary(ctx, req)
 }
 
-// AgentTunnelStart calls service.RaidoService.AgentTunnelStart.
-func (c *raidoServiceClient) AgentTunnelStart(ctx context.Context, req *connect.Request[service.AgentTunnelStartRequest]) (*connect.Response[service.AgentTunnelStartResponse], error) {
-	return c.agentTunnelStart.CallUnary(ctx, req)
+// AgentRemove calls service.RaidoService.AgentRemove.
+func (c *raidoServiceClient) AgentRemove(ctx context.Context, req *connect.Request[service.AgentRemoveRequest]) (*connect.Response[service.Empty], error) {
+	return c.agentRemove.CallUnary(ctx, req)
 }
 
-// AgentTunnelStop calls service.RaidoService.AgentTunnelStop.
-func (c *raidoServiceClient) AgentTunnelStop(ctx context.Context, req *connect.Request[service.AgentTunnelStopRequest]) (*connect.Response[service.AgentTunnelStopResponse], error) {
-	return c.agentTunnelStop.CallUnary(ctx, req)
+// TunnelList calls service.RaidoService.TunnelList.
+func (c *raidoServiceClient) TunnelList(ctx context.Context, req *connect.Request[service.Empty]) (*connect.Response[service.TunnelListResponse], error) {
+	return c.tunnelList.CallUnary(ctx, req)
+}
+
+// TunnelStart calls service.RaidoService.TunnelStart.
+func (c *raidoServiceClient) TunnelStart(ctx context.Context, req *connect.Request[service.TunnelStartRequest]) (*connect.Response[service.Empty], error) {
+	return c.tunnelStart.CallUnary(ctx, req)
+}
+
+// TunnelStop calls service.RaidoService.TunnelStop.
+func (c *raidoServiceClient) TunnelStop(ctx context.Context, req *connect.Request[service.TunnelStopRequest]) (*connect.Response[service.Empty], error) {
+	return c.tunnelStop.CallUnary(ctx, req)
+}
+
+// TunnelPause calls service.RaidoService.TunnelPause.
+func (c *raidoServiceClient) TunnelPause(ctx context.Context, req *connect.Request[service.TunnelPauseRequest]) (*connect.Response[service.Empty], error) {
+	return c.tunnelPause.CallUnary(ctx, req)
+}
+
+// TunnelResume calls service.RaidoService.TunnelResume.
+func (c *raidoServiceClient) TunnelResume(ctx context.Context, req *connect.Request[service.TunnelResumeRequest]) (*connect.Response[service.Empty], error) {
+	return c.tunnelResume.CallUnary(ctx, req)
+}
+
+// TunnelAddRoute calls service.RaidoService.TunnelAddRoute.
+func (c *raidoServiceClient) TunnelAddRoute(ctx context.Context, req *connect.Request[service.TunnelAddRouteRequest]) (*connect.Response[service.Empty], error) {
+	return c.tunnelAddRoute.CallUnary(ctx, req)
+}
+
+// TunnelRemoveRoute calls service.RaidoService.TunnelRemoveRoute.
+func (c *raidoServiceClient) TunnelRemoveRoute(ctx context.Context, req *connect.Request[service.TunnelRemoveRouteRequest]) (*connect.Response[service.Empty], error) {
+	return c.tunnelRemoveRoute.CallUnary(ctx, req)
 }
 
 // RaidoServiceHandler is an implementation of the service.RaidoService service.
 type RaidoServiceHandler interface {
 	ProxyStart(context.Context, *connect.Request[service.ProxyStartRequest]) (*connect.Response[service.ProxyStartResponse], error)
-	ProxyStop(context.Context, *connect.Request[service.ProxyStopRequest]) (*connect.Response[service.ProxyStopResponse], error)
-	GetAgents(context.Context, *connect.Request[service.GetAgentsRequest]) (*connect.Response[service.GetAgentsResponse], error)
-	AgentTunnelStart(context.Context, *connect.Request[service.AgentTunnelStartRequest]) (*connect.Response[service.AgentTunnelStartResponse], error)
-	AgentTunnelStop(context.Context, *connect.Request[service.AgentTunnelStopRequest]) (*connect.Response[service.AgentTunnelStopResponse], error)
+	ProxyStop(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.Empty], error)
+	AgentList(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.AgentListResponse], error)
+	AgentRemove(context.Context, *connect.Request[service.AgentRemoveRequest]) (*connect.Response[service.Empty], error)
+	TunnelList(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.TunnelListResponse], error)
+	TunnelStart(context.Context, *connect.Request[service.TunnelStartRequest]) (*connect.Response[service.Empty], error)
+	TunnelStop(context.Context, *connect.Request[service.TunnelStopRequest]) (*connect.Response[service.Empty], error)
+	TunnelPause(context.Context, *connect.Request[service.TunnelPauseRequest]) (*connect.Response[service.Empty], error)
+	TunnelResume(context.Context, *connect.Request[service.TunnelResumeRequest]) (*connect.Response[service.Empty], error)
+	TunnelAddRoute(context.Context, *connect.Request[service.TunnelAddRouteRequest]) (*connect.Response[service.Empty], error)
+	TunnelRemoveRoute(context.Context, *connect.Request[service.TunnelRemoveRouteRequest]) (*connect.Response[service.Empty], error)
 }
 
 // NewRaidoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -170,22 +276,58 @@ func NewRaidoServiceHandler(svc RaidoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(raidoServiceProxyStopMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	raidoServiceGetAgentsHandler := connect.NewUnaryHandler(
-		RaidoServiceGetAgentsProcedure,
-		svc.GetAgents,
-		connect.WithSchema(raidoServiceGetAgentsMethodDescriptor),
+	raidoServiceAgentListHandler := connect.NewUnaryHandler(
+		RaidoServiceAgentListProcedure,
+		svc.AgentList,
+		connect.WithSchema(raidoServiceAgentListMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	raidoServiceAgentTunnelStartHandler := connect.NewUnaryHandler(
-		RaidoServiceAgentTunnelStartProcedure,
-		svc.AgentTunnelStart,
-		connect.WithSchema(raidoServiceAgentTunnelStartMethodDescriptor),
+	raidoServiceAgentRemoveHandler := connect.NewUnaryHandler(
+		RaidoServiceAgentRemoveProcedure,
+		svc.AgentRemove,
+		connect.WithSchema(raidoServiceAgentRemoveMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	raidoServiceAgentTunnelStopHandler := connect.NewUnaryHandler(
-		RaidoServiceAgentTunnelStopProcedure,
-		svc.AgentTunnelStop,
-		connect.WithSchema(raidoServiceAgentTunnelStopMethodDescriptor),
+	raidoServiceTunnelListHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelListProcedure,
+		svc.TunnelList,
+		connect.WithSchema(raidoServiceTunnelListMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	raidoServiceTunnelStartHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelStartProcedure,
+		svc.TunnelStart,
+		connect.WithSchema(raidoServiceTunnelStartMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	raidoServiceTunnelStopHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelStopProcedure,
+		svc.TunnelStop,
+		connect.WithSchema(raidoServiceTunnelStopMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	raidoServiceTunnelPauseHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelPauseProcedure,
+		svc.TunnelPause,
+		connect.WithSchema(raidoServiceTunnelPauseMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	raidoServiceTunnelResumeHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelResumeProcedure,
+		svc.TunnelResume,
+		connect.WithSchema(raidoServiceTunnelResumeMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	raidoServiceTunnelAddRouteHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelAddRouteProcedure,
+		svc.TunnelAddRoute,
+		connect.WithSchema(raidoServiceTunnelAddRouteMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	raidoServiceTunnelRemoveRouteHandler := connect.NewUnaryHandler(
+		RaidoServiceTunnelRemoveRouteProcedure,
+		svc.TunnelRemoveRoute,
+		connect.WithSchema(raidoServiceTunnelRemoveRouteMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/service.RaidoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -194,12 +336,24 @@ func NewRaidoServiceHandler(svc RaidoServiceHandler, opts ...connect.HandlerOpti
 			raidoServiceProxyStartHandler.ServeHTTP(w, r)
 		case RaidoServiceProxyStopProcedure:
 			raidoServiceProxyStopHandler.ServeHTTP(w, r)
-		case RaidoServiceGetAgentsProcedure:
-			raidoServiceGetAgentsHandler.ServeHTTP(w, r)
-		case RaidoServiceAgentTunnelStartProcedure:
-			raidoServiceAgentTunnelStartHandler.ServeHTTP(w, r)
-		case RaidoServiceAgentTunnelStopProcedure:
-			raidoServiceAgentTunnelStopHandler.ServeHTTP(w, r)
+		case RaidoServiceAgentListProcedure:
+			raidoServiceAgentListHandler.ServeHTTP(w, r)
+		case RaidoServiceAgentRemoveProcedure:
+			raidoServiceAgentRemoveHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelListProcedure:
+			raidoServiceTunnelListHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelStartProcedure:
+			raidoServiceTunnelStartHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelStopProcedure:
+			raidoServiceTunnelStopHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelPauseProcedure:
+			raidoServiceTunnelPauseHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelResumeProcedure:
+			raidoServiceTunnelResumeHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelAddRouteProcedure:
+			raidoServiceTunnelAddRouteHandler.ServeHTTP(w, r)
+		case RaidoServiceTunnelRemoveRouteProcedure:
+			raidoServiceTunnelRemoveRouteHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -213,18 +367,42 @@ func (UnimplementedRaidoServiceHandler) ProxyStart(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.ProxyStart is not implemented"))
 }
 
-func (UnimplementedRaidoServiceHandler) ProxyStop(context.Context, *connect.Request[service.ProxyStopRequest]) (*connect.Response[service.ProxyStopResponse], error) {
+func (UnimplementedRaidoServiceHandler) ProxyStop(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.ProxyStop is not implemented"))
 }
 
-func (UnimplementedRaidoServiceHandler) GetAgents(context.Context, *connect.Request[service.GetAgentsRequest]) (*connect.Response[service.GetAgentsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.GetAgents is not implemented"))
+func (UnimplementedRaidoServiceHandler) AgentList(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.AgentListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.AgentList is not implemented"))
 }
 
-func (UnimplementedRaidoServiceHandler) AgentTunnelStart(context.Context, *connect.Request[service.AgentTunnelStartRequest]) (*connect.Response[service.AgentTunnelStartResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.AgentTunnelStart is not implemented"))
+func (UnimplementedRaidoServiceHandler) AgentRemove(context.Context, *connect.Request[service.AgentRemoveRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.AgentRemove is not implemented"))
 }
 
-func (UnimplementedRaidoServiceHandler) AgentTunnelStop(context.Context, *connect.Request[service.AgentTunnelStopRequest]) (*connect.Response[service.AgentTunnelStopResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.AgentTunnelStop is not implemented"))
+func (UnimplementedRaidoServiceHandler) TunnelList(context.Context, *connect.Request[service.Empty]) (*connect.Response[service.TunnelListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelList is not implemented"))
+}
+
+func (UnimplementedRaidoServiceHandler) TunnelStart(context.Context, *connect.Request[service.TunnelStartRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelStart is not implemented"))
+}
+
+func (UnimplementedRaidoServiceHandler) TunnelStop(context.Context, *connect.Request[service.TunnelStopRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelStop is not implemented"))
+}
+
+func (UnimplementedRaidoServiceHandler) TunnelPause(context.Context, *connect.Request[service.TunnelPauseRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelPause is not implemented"))
+}
+
+func (UnimplementedRaidoServiceHandler) TunnelResume(context.Context, *connect.Request[service.TunnelResumeRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelResume is not implemented"))
+}
+
+func (UnimplementedRaidoServiceHandler) TunnelAddRoute(context.Context, *connect.Request[service.TunnelAddRouteRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelAddRoute is not implemented"))
+}
+
+func (UnimplementedRaidoServiceHandler) TunnelRemoveRoute(context.Context, *connect.Request[service.TunnelRemoveRouteRequest]) (*connect.Response[service.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("service.RaidoService.TunnelRemoveRoute is not implemented"))
 }

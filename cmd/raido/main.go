@@ -23,20 +23,18 @@ var (
 				},
 			})
 
-			if verbose {
-				zerolog.SetGlobalLevel(zerolog.TraceLevel)
-			}
-
 			return nil
 		},
 	}
 )
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&verbose, "v", false, "enable verbose mode")
-	rootCmd.AddCommand(serviceCmd)
-	rootCmd.AddCommand(agentCmd)
-	rootCmd.AddCommand(proxyCmd)
+	rootCmd.AddCommand(
+		serviceCmd,
+		agentCmd,
+		tunnelCmd,
+		proxyCmd,
+	)
 }
 
 func main() {
@@ -54,6 +52,6 @@ func main() {
 	}()
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		log.Error().Err(err).Msg("failed to execute command")
+		os.Exit(1)
 	}
 }

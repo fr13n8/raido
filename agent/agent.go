@@ -6,15 +6,13 @@ import (
 
 	"github.com/fr13n8/raido/proxy/tunnel"
 	"github.com/quic-go/quic-go"
-	"github.com/rs/zerolog/log"
 )
 
 type Agent struct {
-	Name      string
-	Conn      quic.Connection
-	Routes    []string
-	Tunnel    *tunnel.Tunnel
-	TunStatus bool
+	Name   string
+	Conn   quic.Connection
+	Routes []string
+	Tunnel *tunnel.Tunnel
 }
 
 func New(name string, conn quic.Connection, routes []string) *Agent {
@@ -25,7 +23,7 @@ func New(name string, conn quic.Connection, routes []string) *Agent {
 	}
 }
 
-func (a *Agent) StartTunnel(ctx context.Context) error {
+func (a *Agent) StartTunnel(ctx context.Context, routes []string) error {
 	if a.Tunnel != nil {
 		return nil
 	}
@@ -35,14 +33,16 @@ func (a *Agent) StartTunnel(ctx context.Context) error {
 		return fmt.Errorf("failed to create tunnel: %w", err)
 	}
 
-	for _, r := range a.Routes {
-		if err := tun.Link().AddRoute(r); err != nil {
-			log.Error().Err(err).Msgf("error add route \"%s\" to interface \"%s\"", r, tun.Name())
-		}
+	if len(routes) == 0 {
+		routes = a.Routes
 	}
 
 	a.Tunnel = tun
-	a.TunStatus = true
+
+	if err := tun.AddRoutes(routes...); err != nil {
+		return fmt.Errorf("failed to add routes to tunnel: %w", err)
+	}
+
 	return nil
 }
 
@@ -51,6 +51,8 @@ func (a *Agent) CloseTunnel() error {
 		return nil
 	}
 
-	a.TunStatus = false
-	return a.Tunnel.Close()
+	t := a.Tunnel
+	a.Tunnel = nil
+
+	return t.Close()
 }

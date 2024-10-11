@@ -4,8 +4,8 @@ var (
 	proxyAddr   string
 	serviceAddr string
 	agentId     string
+	routes      []string
 	proxyDomain string
-	verbose     bool
 )
 
 func init() {

@@ -28,6 +28,7 @@ type ServiceHandler struct {
 	agentManager        *agent.Manager
 	proxyServerInstance *quic.Server
 	ctx                 context.Context
+	proxyCancell        context.CancelFunc
 	serviceconnect.UnimplementedRaidoServiceHandler
 }
 
@@ -61,7 +62,9 @@ func (s *ServiceHandler) ProxyStart(ctx context.Context, req *connect.Request[pb
 	}
 
 	go func() {
-		if err := s.proxyServerInstance.Listen(s.ctx); err != nil {
+		ctx, cancel := context.WithCancel(s.ctx)
+		s.proxyCancell = cancel
+		if err := s.proxyServerInstance.Listen(ctx); err != nil {
 			log.Error().Err(err).Msg("Failed to listen proxy")
 		}
 	}()
@@ -77,25 +80,22 @@ func (s *ServiceHandler) ProxyStart(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
-func (s *ServiceHandler) ProxyStop(ctx context.Context, req *connect.Request[pb.ProxyStopRequest]) (*connect.Response[pb.ProxyStopResponse], error) {
+func (s *ServiceHandler) ProxyStop(ctx context.Context, req *connect.Request[pb.Empty]) (*connect.Response[pb.Empty], error) {
 	log.Info().Any("req", req).Msg("ProxyStop()")
 
 	if s.proxyServerInstance == nil {
 		log.Info().Msg("proxy server instance is nil")
-		return connect.NewResponse(&pb.ProxyStopResponse{}), nil
+		return connect.NewResponse(&pb.Empty{}), nil
 	}
 
-	if err := s.proxyServerInstance.ShutdownGracefully(ctx); err != nil {
-		log.Error().Err(err).Msg("failed to shutdown proxy server")
-		return nil, fmt.Errorf("failed to shutdown proxy server")
-	}
+	s.proxyCancell()
 
 	s.proxyServerInstance = nil
 
-	return connect.NewResponse(&pb.ProxyStopResponse{}), nil
+	return connect.NewResponse(&pb.Empty{}), nil
 }
 
-func (s *ServiceHandler) GetAgents(ctx context.Context, req *connect.Request[pb.GetAgentsRequest]) (*connect.Response[pb.GetAgentsResponse], error) {
+func (s *ServiceHandler) AgentList(ctx context.Context, req *connect.Request[pb.Empty]) (*connect.Response[pb.AgentListResponse], error) {
 	log.Info().Any("req", req).Msg("GetAgents()")
 	agentsResponse := s.agentManager.GetAgents()
 
@@ -104,16 +104,15 @@ func (s *ServiceHandler) GetAgents(ctx context.Context, req *connect.Request[pb.
 		agents[id] = &pb.Agent{
 			Name:   a.Name,
 			Routes: a.Routes,
-			Status: a.TunStatus,
 		}
 	}
 
-	return connect.NewResponse(&pb.GetAgentsResponse{
+	return connect.NewResponse(&pb.AgentListResponse{
 		Agents: agents,
 	}), nil
 }
 
-func (s *ServiceHandler) AgentTunnelStart(ctx context.Context, req *connect.Request[pb.AgentTunnelStartRequest]) (*connect.Response[pb.AgentTunnelStartResponse], error) {
+func (s *ServiceHandler) TunnelStart(ctx context.Context, req *connect.Request[pb.TunnelStartRequest]) (*connect.Response[pb.Empty], error) {
 	log.Info().Any("req", req).Msg("AgentTunnelStart()")
 
 	id := req.Msg.AgentId
@@ -124,15 +123,15 @@ func (s *ServiceHandler) AgentTunnelStart(ctx context.Context, req *connect.Requ
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if err := a.StartTunnel(context.Background()); err != nil {
+	if err := a.StartTunnel(s.ctx, req.Msg.Routes); err != nil {
 		log.Error().Err(err).Msgf("failed to start tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("failed to start tunnel for \"%s\"", id)
 	}
 
-	return connect.NewResponse(&pb.AgentTunnelStartResponse{}), nil
+	return connect.NewResponse(&pb.Empty{}), nil
 }
 
-func (s *ServiceHandler) AgentTunnelStop(ctx context.Context, req *connect.Request[pb.AgentTunnelStopRequest]) (*connect.Response[pb.AgentTunnelStopResponse], error) {
+func (s *ServiceHandler) TunnelStop(ctx context.Context, req *connect.Request[pb.TunnelStopRequest]) (*connect.Response[pb.Empty], error) {
 	log.Info().Any("req", req).Msg("AgentTunnelStop()")
 
 	id := req.Msg.AgentId
@@ -148,7 +147,149 @@ func (s *ServiceHandler) AgentTunnelStop(ctx context.Context, req *connect.Reque
 		return nil, fmt.Errorf("could not stop tunnel for \"%s\"", id)
 	}
 
-	return connect.NewResponse(&pb.AgentTunnelStopResponse{}), nil
+	return connect.NewResponse(&pb.Empty{}), nil
+}
+
+func (s *ServiceHandler) TunnelAddRoute(ctx context.Context, req *connect.Request[pb.TunnelAddRouteRequest]) (*connect.Response[pb.Empty], error) {
+	log.Info().Any("req", req).Msg("AgentTunnelAddRoute()")
+
+	id := req.Msg.AgentId
+
+	a := s.agentManager.GetAgent(id)
+	if a == nil {
+		log.Error().Msgf("agent with id \"%s\" doesnt exist", id)
+		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
+	}
+
+	if a.Tunnel == nil {
+		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
+		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
+	}
+
+	if err := a.Tunnel.AddRoutes(req.Msg.Routes...); err != nil {
+		log.Error().Err(err).Msgf("failed to add route to tunnel for \"%s\"", id)
+		return nil, fmt.Errorf("failed to add route to tunnel for \"%s\"", id)
+	}
+
+	return connect.NewResponse(&pb.Empty{}), nil
+}
+
+func (s *ServiceHandler) TunnelRemoveRoute(ctx context.Context, req *connect.Request[pb.TunnelRemoveRouteRequest]) (*connect.Response[pb.Empty], error) {
+	log.Info().Any("req", req).Msg("AgentTunnelRemoveRoute()")
+
+	id := req.Msg.AgentId
+
+	a := s.agentManager.GetAgent(id)
+	if a == nil {
+		log.Error().Msgf("agent with id \"%s\" doesnt exist", id)
+		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
+	}
+
+	if a.Tunnel == nil {
+		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
+		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
+	}
+
+	if err := a.Tunnel.RemoveRoutes(req.Msg.Routes...); err != nil {
+		log.Error().Err(err).Msgf("failed to remove route from tunnel for \"%s\"", id)
+		return nil, fmt.Errorf("failed to remove route from tunnel for \"%s\"", id)
+	}
+
+	return connect.NewResponse(&pb.Empty{}), nil
+}
+
+func (s *ServiceHandler) TunnelPause(ctx context.Context, req *connect.Request[pb.TunnelPauseRequest]) (*connect.Response[pb.Empty], error) {
+	log.Info().Any("req", req).Msg("AgentTunnelPause()")
+
+	id := req.Msg.AgentId
+
+	a := s.agentManager.GetAgent(id)
+	if a == nil {
+		log.Error().Msgf("agent with id \"%s\" doesnt exist", id)
+		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
+	}
+
+	if a.Tunnel == nil {
+		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
+		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
+	}
+
+	if err := a.Tunnel.Pause(); err != nil {
+		log.Error().Err(err).Msgf("failed to pause tunnel for \"%s\"", id)
+		return nil, fmt.Errorf("failed to pause tunnel for \"%s\"", id)
+	}
+
+	return connect.NewResponse(&pb.Empty{}), nil
+}
+
+func (s *ServiceHandler) TunnelResume(ctx context.Context, req *connect.Request[pb.TunnelResumeRequest]) (*connect.Response[pb.Empty], error) {
+	log.Info().Any("req", req).Msg("AgentTunnelResume()")
+
+	id := req.Msg.AgentId
+
+	a := s.agentManager.GetAgent(id)
+	if a == nil {
+		log.Error().Msgf("agent with id \"%s\" doesnt exist", id)
+		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
+	}
+
+	if a.Tunnel == nil {
+		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
+		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
+	}
+
+	if err := a.Tunnel.Resume(); err != nil {
+		log.Error().Err(err).Msgf("failed to resume tunnel for \"%s\"", id)
+		return nil, fmt.Errorf("failed to resume tunnel for \"%s\"", id)
+	}
+
+	return connect.NewResponse(&pb.Empty{}), nil
+}
+
+func (s *ServiceHandler) TunnelList(ctx context.Context, req *connect.Request[pb.Empty]) (*connect.Response[pb.TunnelListResponse], error) {
+	log.Info().Any("req", req).Msg("AgentTunnelList()")
+
+	tunnels := make([]*pb.Tunnel, 0, len(s.agentManager.GetAgents()))
+	for id, a := range s.agentManager.GetAgents() {
+		if a.Tunnel == nil {
+			log.Info().Msgf("tunnel for agent \"%s\" is nil", id)
+			continue
+		}
+
+		routes, err := a.Tunnel.ActiveRoutes()
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to get routes for \"%s\"", id)
+			continue
+		}
+
+		tunnels = append(tunnels, &pb.Tunnel{
+			Routes:    routes,
+			Status:    a.Tunnel.Status(),
+			AgentId:   id,
+			Interface: a.Tunnel.Name(),
+		})
+	}
+
+	return connect.NewResponse(&pb.TunnelListResponse{
+		Tunnels: tunnels,
+	}), nil
+}
+
+func (s *ServiceHandler) AgentRemove(ctx context.Context, req *connect.Request[pb.AgentRemoveRequest]) (*connect.Response[pb.Empty], error) {
+	log.Info().Any("req", req).Msg("AgentRemove()")
+
+	id := req.Msg.AgentId
+	a := s.agentManager.GetAgent(id)
+
+	s.agentManager.RemoveAgent(id)
+
+	a.Conn.CloseWithError(protocol.ApplicationOK, "server closing down")
+	if err := a.CloseTunnel(); err != nil {
+		log.Error().Err(err).Msgf("failed to close tunnel for \"%s\"", id)
+		return nil, fmt.Errorf("failed to close tunnel for \"%s", id)
+	}
+
+	return connect.NewResponse(&pb.Empty{}), nil
 }
 
 type Server struct {

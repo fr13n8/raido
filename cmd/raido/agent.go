@@ -40,11 +40,11 @@ var (
 
 	agentListCmd = &cobra.Command{
 		Use:   "list",
-		Short: "List agents and their status",
+		Short: "List agents",
 		Run: func(cmd *cobra.Command, args []string) {
 			c := cmd.Context().Value(app.ClientKey{}).(*app.Client)
 
-			agents, err := c.GetAgents(cmd.Context())
+			agents, err := c.AgentList(cmd.Context())
 			if err != nil {
 				log.Error().Err(err).Msg("failed to get agents")
 				return
@@ -60,68 +60,39 @@ var (
 
 					return RowStyle
 				}).
-				Headers("ID", "Hostname", "Routes", "Status")
+				Headers("№", "ID", "Hostname", "Routes")
 
+			i := 1
 			for id, a := range agents {
-				status := "Active"
-				if !a.Status {
-					status = "Inactive"
-				}
-				t.Row(id, a.Name, strings.Join(a.Routes, "\n"), status)
+				t.Row(fmt.Sprintf("%d", i), id, a.Name, strings.Join(a.Routes, "\n"))
 			}
 
 			fmt.Println(t)
 		},
 	}
 
-	agentStartTunnelCmd = &cobra.Command{
-		Use:   "start-tunnel",
-		Short: "Start tunnel to agent",
+	agentRemoveCmd = &cobra.Command{
+		Use:   "remove",
+		Short: "Remove agent",
 		Run: func(cmd *cobra.Command, args []string) {
-			if agentId == "" {
-				log.Error().Msg("agent ID is required")
-				return
-			}
-
 			c := cmd.Context().Value(app.ClientKey{}).(*app.Client)
 
-			log.Info().Msg("start tunnel...")
-			if err := c.AgentTunnelStart(cmd.Context(), agentId); err != nil {
-				log.Error().Err(err).Msg("failed to start tunnel")
+			if err := c.AgentRemove(cmd.Context(), agentId); err != nil {
+				log.Error().Err(err).Msg("failed to remove agent")
 				return
 			}
 
-			log.Info().Msg("tunnel started")
-		},
-	}
-
-	agentStopTunnelCmd = &cobra.Command{
-		Use:   "stop-tunnel",
-		Short: "Stop tunnel to agent",
-		Run: func(cmd *cobra.Command, args []string) {
-			if agentId == "" {
-				log.Error().Msg("agent ID is required")
-				return
-			}
-
-			c := cmd.Context().Value(app.ClientKey{}).(*app.Client)
-
-			log.Info().Msg("stop tunnel...")
-			if err := c.AgentTunnelStop(cmd.Context(), agentId); err != nil {
-				log.Error().Err(err).Msg("Failed to stop tunnel")
-				return
-			}
-
-			log.Info().Msg("tunnel stopped")
+			log.Info().Msg("agent successfully removed")
 		},
 	}
 )
 
 func init() {
-	// agentCmd.PersistentFlags().StringVar(&serviceAddr, "service-addr", "unix:///var/run/raido.sock", "Service listen address")
+	agentRemoveCmd.Flags().StringVar(&agentId, "agent-id", "", "Agent ID to remove")
+	agentRemoveCmd.MarkFlagRequired("agent-id")
 
-	agentStartTunnelCmd.Flags().StringVar(&agentId, "agent-id", "", "Agent ID")
-	agentStopTunnelCmd.Flags().StringVar(&agentId, "agent-id", "", "Agent ID")
-
-	agentCmd.AddCommand(agentListCmd, agentStartTunnelCmd, agentStopTunnelCmd)
+	agentCmd.AddCommand(
+		agentListCmd,
+		agentRemoveCmd,
+	)
 }

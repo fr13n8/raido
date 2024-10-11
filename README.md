@@ -17,7 +17,8 @@
 ---
 
 > [!WARNING]
-> **The functionality was tested only on Linux machines.**
+> **The functionality was tested only on Linux machines.**\
+> **The program may work unstable because there are no tests.**
 
 ## Features
 
@@ -29,6 +30,7 @@
   - Possible to run in daemon mode
   - Automatic management of **TUN** interfaces
   - Self-signed certificates
+  - Pause and resume tunnels
 - Network
   - TCP
   - UDP
@@ -78,26 +80,27 @@ agent ❯❯ agent -pa 10.1.0.3:8787 -ch 5AE8BB04B096A6913A4EA45C35537355B82DB66
 
 ```bash
 proxy ❯❯ raido agent list # print all agents and their available routes in a table
-┌────────────────────────┬───────────────────┬─────────────┬──────────┐
-│           ID           │     Hostname      │   Routes    │  Status  │
-├────────────────────────┼───────────────────┼─────────────┼──────────┤
-│ LMD6Ycek8Rz6pXxL4kzLM8 │ root@1e28e066f43a │ 10.2.0.3/16 │ Inactive │
-│                        │                   │ 10.3.0.3/16 │          │
-│                        │                   │ 10.4.0.3/16 │          │
-└────────────────────────┴───────────────────┴─────────────┴──────────┘
+┌───┬────────────────────────┬───────────────────┬─────────────┐
+│ № │           ID           │     Hostname      │   Routes    │
+├───┼────────────────────────┼───────────────────┼─────────────┤
+│ 1 │ LMD6Ycek8Rz6pXxL4kzLM8 │ root@1e28e066f43a │ 10.2.0.3/16 │
+│   │                        │                   │ 10.3.0.3/16 │
+│   │                        │                   │ 10.4.0.3/16 │
+└───┴────────────────────────┴───────────────────┴─────────────┘
 ```
 
 ### Start tunneling to agent
 
 ```bash
-proxy ❯❯ raido agent start-tunnel --agent-id LMD6Ycek8Rz6pXxL4kzLM8 # the command creates the tun interface and adds all routes
-┌────────────────────────┬───────────────────┬─────────────┬──────────┐
-│           ID           │     Hostname      │   Routes    │  Status  │
-├────────────────────────┼───────────────────┼─────────────┼──────────┤
-│ LMD6Ycek8Rz6pXxL4kzLM8 │ root@1e28e066f43a │ 10.2.0.3/16 │ Active   │
-│                        │                   │ 10.3.0.3/16 │          │
-│                        │                   │ 10.4.0.3/16 │          │
-└────────────────────────┴───────────────────┴─────────────┴──────────┘
+proxy ❯❯ raido tunnel start --agent-id LMD6Ycek8Rz6pXxL4kzLM8 # the command creates the tun interface and adds all routes
+proxy ❯❯ raido tunnel list
+┌───┬────────────────────────┬─────────┬─────────────┬──────┐
+│ № │        Agent ID        │Interface│   Routes    │Status│
+├───┼────────────────────────┼─────────┼─────────────┼──────┤
+│ 1 │ LMD6Ycek8Rz6pXxL4kzLM8 │ raido0  │ 10.2.0.3/16 │ up   │
+│   │                        │         │ 10.3.0.3/16 │      │
+│   │                        │         │ 10.4.0.3/16 │      │
+└───┴────────────────────────┴─────────┴─────────────┴──────┘
 ```
 
 That's it, now you can send requests directly to these addresses.
@@ -107,8 +110,6 @@ That's it, now you can send requests directly to these addresses.
 - Think about a way to transmit ICMP packets without changing the gVisor code. (Maybe use agent to detect hosts using icmp-echo requests) ¯\\_(ツ)_/¯
 - Add new transport protocols for traffic tunneling
 - Add the ability to build chains of agents
-- Add the ability to independently select which addresses to add for tunneling
-- Add the ability to stop and resume the tunnel
 - Add multiplatform support
 - Add logging options
 - FIX BUGS!
