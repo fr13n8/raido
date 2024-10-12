@@ -8,6 +8,7 @@ import (
 
 	"net"
 
+	"github.com/fr13n8/raido/utils/ip"
 	"github.com/rs/zerolog/log"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -49,7 +50,48 @@ func NewLinkTun() (*LinkTun, error) {
 		return nil, fmt.Errorf("failed to bring up interface \"%s\": %w", link.Attrs().Name, err)
 	}
 
-	return &LinkTun{link}, nil
+	l := &LinkTun{link}
+
+	if err := l.AddLoopbackRoute(); err != nil {
+		return nil, fmt.Errorf("failed to add loopback route: %w", err)
+	}
+
+	return l, nil
+}
+
+// add the next available network address to the interface routes from the range 240.0.0.0/4
+// and each time a new interface is created the address is increased by 1 (for example, 240.1.0.0/32)
+func (l *LinkTun) AddLoopbackRoute() error {
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_ALL)
+	if err != nil {
+		return fmt.Errorf("failed to get route list: %w", err)
+	}
+
+	var nextAddr byte
+	for _, route := range routes {
+		if route.Dst.IP[0] == 240 {
+			if route.Dst.IP[1] > nextAddr {
+				nextAddr = route.Dst.IP[1]
+			}
+		}
+	}
+
+	nextAddr++
+	if nextAddr == 0 {
+		nextAddr++
+	}
+
+	if err := netlink.RouteAdd(&netlink.Route{
+		LinkIndex: l.link.Attrs().Index,
+		Dst: &net.IPNet{
+			IP:   net.IPv4(240, nextAddr, 0, 0),
+			Mask: net.CIDRMask(32, 32),
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to add route to interface: %w", err)
+	}
+
+	return nil
 }
 
 func GetLinkTunByName(name string) (*LinkTun, error) {
@@ -68,7 +110,7 @@ func GetLinkTunByName(name string) (*LinkTun, error) {
 func (l *LinkTun) RemoveRoutes(routes ...string) error {
 	var errs []error
 	for _, route := range routes {
-		ns, err := parseNetAddress(route)
+		ns, err := ip.ParseNetAddress(route)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("error parse route \"%s\": %w", route, err))
 			continue
@@ -85,7 +127,7 @@ func (l *LinkTun) RemoveRoutes(routes ...string) error {
 func (l *LinkTun) AddRoutes(routes ...string) error {
 	var errs []error
 	for _, route := range routes {
-		ns, err := parseNetAddress(route)
+		ns, err := ip.ParseNetAddress(route)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("error parse route \"%s\": %w", route, err))
 			continue
@@ -158,7 +200,7 @@ func Destroy(name string) error {
 	return nil
 }
 
-func (l *LinkTun) removeRoute(address NetAddress) error {
+func (l *LinkTun) removeRoute(address ip.NetAddress) error {
 	route := &netlink.Route{
 		LinkIndex: l.link.Attrs().Index,
 		Dst:       address.Network,
@@ -169,27 +211,6 @@ func (l *LinkTun) removeRoute(address NetAddress) error {
 	}
 
 	return nil
-}
-
-type NetAddress struct {
-	IP      net.IP
-	Network *net.IPNet
-}
-
-func parseNetAddress(address string) (NetAddress, error) {
-	ip, network, err := net.ParseCIDR(address)
-	if err != nil {
-		return NetAddress{}, err
-	}
-	return NetAddress{
-		IP:      ip,
-		Network: network,
-	}, nil
-}
-
-func (addr NetAddress) String() string {
-	maskSize, _ := addr.Network.Mask.Size()
-	return fmt.Sprintf("%s/%d", addr.IP.String(), maskSize)
 }
 
 func GetTunTaps() ([]LinkTun, error) {
@@ -217,13 +238,39 @@ func (l *LinkTun) Routes() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get route list: %w", err)
 	}
-	// tapRoutes := make(map[string]netlink.Route)
-	destinationRoutes := make([]string, len(routes))
-	for id, route := range routes {
-		// tapRoutes[route.Dst.String()] = route
-		destinationRoutes[id] = route.Dst.String()
+
+	destinationRoutes := make([]string, 0, len(routes))
+	for _, route := range routes {
+		localAddress, err := ip.ParseNetAddress(route.Dst.String())
+		if err != nil {
+			log.Error().Err(err).Msg("could not parse local address")
+			continue
+		}
+		if !ip.LoopbackRoute.Network.Contains(localAddress.IP) {
+			destinationRoutes = append(destinationRoutes, route.Dst.String())
+		}
 	}
 	return destinationRoutes, nil
+}
+
+func (l *LinkTun) GetLoopbackRoute() (string, error) {
+	routes, err := netlink.RouteList(l.link, netlink.FAMILY_ALL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get route list: %w", err)
+	}
+
+	for _, route := range routes {
+		localAddress, err := ip.ParseNetAddress(route.Dst.String())
+		if err != nil {
+			log.Error().Err(err).Msg("could not parse local address")
+			continue
+		}
+		if ip.LoopbackRoute.Network.Contains(localAddress.IP) {
+			return route.Dst.String(), nil
+		}
+	}
+
+	return "", nil
 }
 
 //	mkdir -p /dev/net && \

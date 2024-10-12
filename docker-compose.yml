@@ -1,0 +1,70 @@
+services:
+  user:
+    build:
+      context: .
+      dockerfile: raido.Dockerfile
+    image: raido:latest
+    networks:
+      exposed:
+        ipv4_address: 10.1.0.2
+        ipv6_address: fd:1::2
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    cap_add:
+      - SYS_MODULE
+      - NET_ADMIN
+    environment:
+    - DISPLAY=host.docker.internal:0
+  server:
+    depends_on:
+      - user
+    image: raido:latest
+    networks:
+      exposed:
+        ipv4_address: 10.1.0.3
+        ipv6_address: fd:1::3
+      private:
+        ipv4_address: 10.2.0.3
+        ipv6_address: fd:2::3
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    cap_add:
+      - SYS_MODULE
+      - NET_ADMIN
+    environment:
+    - DISPLAY=host.docker.internal:0
+  private:
+    depends_on:
+      - user
+    image: raido:latest
+    networks:
+      private:
+        ipv4_address: 10.2.0.4
+        ipv6_address: fd:2::4
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    cap_add:
+      - SYS_MODULE
+      - NET_ADMIN
+
+networks:
+  exposed:
+    enable_ipv6: true
+    driver: bridge
+    name: exposed
+    ipam:
+      config:
+        - subnet: 10.1.0.0/16
+          gateway: 10.1.0.1
+        - subnet: fd:1::/64
+          gateway: fd:1::1
+  private:
+    enable_ipv6: true
+    driver: bridge
+    name: private
+    ipam:
+      config:
+        - subnet: 10.2.0.0/16
+          gateway: 10.2.0.1
+        - subnet: fd:2::/64
+          gateway: fd:2::1

@@ -262,11 +262,17 @@ func (s *ServiceHandler) TunnelList(ctx context.Context, req *connect.Request[pb
 			continue
 		}
 
+		addr, err := a.Tunnel.GetLoopbackRoute()
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to get address for \"%s\"", id)
+		}
+
 		tunnels = append(tunnels, &pb.Tunnel{
 			Routes:    routes,
 			Status:    a.Tunnel.Status(),
 			AgentId:   id,
 			Interface: a.Tunnel.Name(),
+			Loopback:  addr,
 		})
 	}
 

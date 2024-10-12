@@ -65,6 +65,7 @@ var (
 			i := 1
 			for id, a := range agents {
 				t.Row(fmt.Sprintf("%d", i), id, a.Name, strings.Join(a.Routes, "\n"))
+				i++
 			}
 
 			fmt.Println(t)

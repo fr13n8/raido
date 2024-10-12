@@ -116,6 +116,10 @@ func (t *Tunnel) Resume() error {
 		return fmt.Errorf("failed to add active routes: %w", err)
 	}
 
+	if err := t.link.AddLoopbackRoute(); err != nil {
+		return fmt.Errorf("failed to add loopback route: %w", err)
+	}
+
 	return nil
 }
 
@@ -130,4 +134,13 @@ func (t *Tunnel) ActiveRoutes() ([]string, error) {
 
 func (t *Tunnel) Status() string {
 	return t.link.Status()
+}
+
+func (t *Tunnel) GetLoopbackRoute() (string, error) {
+	addr, err := t.link.GetLoopbackRoute()
+	if err != nil {
+		return "", fmt.Errorf("failed to get address: %w", err)
+	}
+
+	return addr, nil
 }

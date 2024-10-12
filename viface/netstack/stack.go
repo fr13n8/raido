@@ -36,7 +36,7 @@ func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn quic.Conne
 	options := []Option{
 		tcpSackEnabledOption(true), // Enable TCP SACK.
 		// tcpRecovery(tcpip.TCPRACKLossDetection), // Use RACK loss detection.
-		tcpUseSynCookies(false),                // Enable SYN cookies (can affect nmap scans).
+		tcpUseSynCookies(false),                // Enable SYN cookies.
 		routeTableOption(nicID),                // Configure routing.
 		forwardingOption(true),                 // Enable packet forwarding.
 		ttlOption(64),                          // Set default TTL to 64.

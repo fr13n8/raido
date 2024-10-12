@@ -7,6 +7,7 @@ import (
 
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/relay"
+	"github.com/fr13n8/raido/utils/ip"
 	"github.com/quic-go/quic-go"
 	"github.com/rs/zerolog/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -48,9 +49,15 @@ func UDP(ctx context.Context, conn quic.Connection, fr *udp.ForwarderRequest) {
 		network = protocol.Networkv6
 	}
 
+	// If the address is from a reserved network range, forward to 127.0.0.1
+	localAddress := net.ParseIP(s.LocalAddress.String())
+	if ip.LoopbackRoute.Network.Contains(localAddress) {
+		localAddress = net.ParseIP("127.0.0.1")
+	}
+
 	// Prepare the IP and port encoding for the protocol
 	ipStruct := protocol.IPAddressWithPortProtocol{
-		IP:       net.ParseIP(s.LocalAddress.String()),
+		IP:       localAddress,
 		Port:     s.LocalPort,
 		Protocol: protocol.TransportUDP,
 		Network:  network,

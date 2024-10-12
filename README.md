@@ -31,6 +31,7 @@
   - Automatic management of **TUN** interfaces
   - Self-signed certificates
   - Pause and resume tunnels
+  - Loopback routing using network range (240.0.0.0/4)
 - Network
   - TCP
   - UDP
@@ -71,7 +72,6 @@ proxy ❯❯ raido service status  # check raido.service status
 
 ```bash
 proxy ❯❯ raido proxy start # start proxy server by default on address 0.0.0.0:8787
-INF proxy started with cert hash: 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC1267E087C4D4B24743996
 ```
 
 <img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/proxy.gif">
@@ -79,7 +79,7 @@ INF proxy started with cert hash: 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC126
 ### Start agent on remote server
 
 ```bash
-agent ❯❯ agent -pa 10.1.0.2:8787 -ch 6A2ABD1043C9CB943BE1884EBE4947023FD49D894AC1267E087C4D4B24743996
+agent ❯❯ agent -pa 10.1.0.2:8787 -ch $(CERT_HASH)
 ```
 
 <img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent.gif">
@@ -88,12 +88,6 @@ agent ❯❯ agent -pa 10.1.0.2:8787 -ch 6A2ABD1043C9CB943BE1884EBE4947023FD49D8
 
 ```bash
 proxy ❯❯ raido agent list # print all agents and their available routes in a table
-┌───┬────────────────────────┬───────────────────┬─────────────┐
-│ № │           ID           │     Hostname      │   Routes    │
-├───┼────────────────────────┼───────────────────┼─────────────┤
-│ 1 │ R6QXeSMXTL2attGG8YEsr6 │ root@99e5d6f726b5 │ 10.2.0.3/16 │
-│   │                        │                   │ 10.1.0.3/16 │
-└───┴────────────────────────┴───────────────────┴─────────────┘
 ```
 
 <img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/agent_list.gif">
@@ -103,12 +97,6 @@ proxy ❯❯ raido agent list # print all agents and their available routes in a
 ```bash
 proxy ❯❯ raido tunnel start --agent-id R6QXeSMXTL2attGG8YEsr6 # the command creates the tun interface and adds all routes
 proxy ❯❯ raido tunnel list
-┌───┬────────────────────────┬───────────────────┬─────────────┐
-│ № │           ID           │     Hostname      │   Routes    │
-├───┼────────────────────────┼───────────────────┼─────────────┤
-│ 1 │ R6QXeSMXTL2attGG8YEsr6 │ root@99e5d6f726b5 │ 10.2.0.3/16 │
-│   │                        │                   │ 10.1.0.3/16 │
-└───┴────────────────────────┴───────────────────┴─────────────┘
 ```
 
 <img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/tunnel.gif">
@@ -116,6 +104,20 @@ proxy ❯❯ raido tunnel list
 That's it, now you can send requests directly to these addresses.
 
 <img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/result.gif">
+
+## Loopback routing: Access the local services of the remote host
+
+> [!NOTE]
+> **Each time a new tunnel is started, raido obtains an available IP address in the `240.0.0.0/4` range and adds it to the device's routes to forward requests for that address to the localhost services on the remote host.**\
+> **If necessary, you can remove and manually add an address from the `240.0.0.0/4` range**
+
+Lets run simple http server with python cli on server host on port `8080`.
+
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/loopback_remote.gif">
+
+And then from user host we can access this servere via loopback route.
+
+<img width="800" alt="Example of pressing the arrow keys to navigate text" src="./doc/loopback_user.gif">
 
 ## TODO
 

@@ -51,10 +51,10 @@ var (
 
 					return RowStyle
 				}).
-				Headers("№", "Agent ID", "Interface", "Routes", "Status")
+				Headers("№", "Agent ID", "Interface", "Routes", "Loopback", "Status")
 
 			for id, tunnel := range tunnels {
-				t.Row(fmt.Sprintf("%d", id+1), tunnel.AgentId, tunnel.Interface, strings.Join(tunnel.Routes, "\n"), tunnel.Status)
+				t.Row(fmt.Sprintf("%d", id+1), tunnel.AgentId, tunnel.Interface, strings.Join(tunnel.Routes, "\n"), tunnel.Loopback, tunnel.Status)
 			}
 
 			fmt.Println(t)

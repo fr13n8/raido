@@ -50,6 +50,7 @@ message Tunnel {
   repeated string routes = 2;
   string status = 3;
   string interface = 4;
+  string loopback = 5;
 }
 
 message TunnelStartRequest {
