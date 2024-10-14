@@ -18,6 +18,8 @@
   <img width="100%" src="./doc/diagram.svg" />
 </div>
 
+In this diagram, the client side starts the service and the Raido proxy server on its side. Then the Agent is started on the server side to connect to our proxy server via the QUIC protocol. The client can then open a tunnel between the server, interact with local resources (access to local ports is provided by reserved addresses 240.0.0.0/4 that are generated for each tunnel when it is opened) and IP addresses of the same network where the server itself is located as if they were in the same network. Also, the Raido proxy server supports multi-connections and manual management of available addresses.
+
 ---
 
 > [!WARNING]
