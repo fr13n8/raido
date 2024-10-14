@@ -1,12 +1,16 @@
-<h1 align="center">
-  <img width="250" src="./doc/raido.png" alt="raido logo" />
-</h1>
+<div align="center">
 
-<h3 align="center">Raido is a "VPN-like" reverse proxy with traffic tunneling via QUIC for accessing private networks</h3>
+# <img align="center" src="./doc/raido.png" width="25%">
+
+</div>
+
+<h3 align="center">
+  Raido is a "VPN-like" reverse proxy with traffic tunneling via QUIC for accessing private networks.
+</h3>
 
 <p align="center">
-  <a href="https://fr13n8.github.io/blog/"><img src="https://img.shields.io/badge/made%20by-fr13n8-blue.svg?style=flat-square" /></a>
-  <img src="https://img.shields.io/badge/go%20version-%3E=1.23-61CFDD.svg?style=flat-square" />
+  <a href="https://fr13n8.github.io/blog/"><img src="https://img.shields.io/badge/made%20by-fr13n8-blue.svg" /></a>
+  <img src="https://img.shields.io/badge/go%20version-%3E=1.23-61CFDD.svg" />
   <img src="https://goreportcard.com/badge/github.com/fr13n8/raido" />
 </p>
 
