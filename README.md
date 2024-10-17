@@ -132,4 +132,5 @@ And then from user host we can access this servere via loopback route.
 - Add the ability to build chains of agents
 - Add multiplatform support
 - Add logging options
+- Support IPV6
 - FIX BUGS!

@@ -1,11 +1,9 @@
 //go:build linux
 
-package device
+package tun
 
 import (
-	"context"
 	"fmt"
-	"net"
 
 	"golang.org/x/sys/unix"
 	"gvisor.dev/gvisor/pkg/rawfile"
@@ -18,7 +16,7 @@ type NetTun struct {
 	name string
 	fd   int
 	mtu  uint32
-	lep  stack.LinkEndpoint
+	stack.LinkEndpoint
 }
 
 // Open initializes the TUN device, retrieves the MTU, and creates the LinkEndpoint.
@@ -57,20 +55,20 @@ func Open(name string) (TUNDevice, error) {
 		name: name,
 		mtu:  _mtu,
 		fd:   fd,
-		lep:  lep,
+		LinkEndpoint: lep,
 	}, nil
 }
 
 // Close gracefully closes the TUN device and its associated resources.
 func (t *NetTun) Close() error {
-	defer t.lep.Close()
+	defer t.LinkEndpoint.Close()
 	// Close the file descriptor for the TUN device.
 	return unix.Close(t.fd)
 }
 
 // Dev returns the LinkEndpoint for the TUN device.
 func (t *NetTun) Dev() stack.LinkEndpoint {
-	return t.lep
+	return t.LinkEndpoint
 }
 
 // Name returns the name of the TUN device.
@@ -78,12 +76,3 @@ func (t *NetTun) Name() string {
 	return t.name
 }
 
-// AddSubnet adds a subnet route to the TUN device.
-func (t *NetTun) AddSubnet(context.Context, *net.IPNet) error {
-	return nil
-}
-
-// RemoveSubnet removes a subnet route from the TUN device.
-func (t *NetTun) RemoveSubnet(context.Context, *net.IPNet) error {
-	return nil
-}
