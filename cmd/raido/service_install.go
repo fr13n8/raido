@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"runtime"
 
 	"github.com/rs/zerolog/log"
@@ -19,6 +20,15 @@ var (
 			svcConfig.Arguments = []string{
 				"service",
 				"run",
+			}
+
+			if logFile != "console" {
+				svcConfig.Arguments = append(svcConfig.Arguments, "--log-file", logFile)
+
+				if err := createDirFile(logFile); err != nil {
+					svcConfig.Option["LogOutput"] = true
+					svcConfig.Option["LogDirectory"] = filepath.Dir(logFile)
+				}
 			}
 
 			if runtime.GOOS == "linux" {
@@ -45,3 +55,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	serviceInstallCmd.Flags().StringVar(&logFile, "log-file", defaultLogFile, "log file path, if set \"console\" then will use console output")
+}

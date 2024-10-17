@@ -13,6 +13,11 @@ var (
 		Use:   "start",
 		Short: "Start service",
 		Run: func(cmd *cobra.Command, args []string) {
+			if err := initLogger("console"); err != nil {
+				log.Error().Err(err).Msg("failed to initialize logger")
+				return
+			}
+
 			ctx, cancel := context.WithCancel(cmd.Context())
 			s, err := newSVC(newProgram(ctx, cancel), newSVCConfig())
 			if err != nil {
@@ -33,6 +38,11 @@ var (
 		Use:   "run",
 		Short: "Run service in foreground mode",
 		Run: func(cmd *cobra.Command, args []string) {
+			if err := initLogger(logFile); err != nil {
+				log.Error().Err(err).Msg("failed to initialize logger")
+				return
+			}
+
 			ctx, cancel := context.WithCancel(cmd.Context())
 			s, err := newSVC(newProgram(ctx, cancel), newSVCConfig())
 			if err != nil {
@@ -51,6 +61,11 @@ var (
 		Use:   "stop",
 		Short: "Stop service",
 		Run: func(cmd *cobra.Command, args []string) {
+			if err := initLogger("console"); err != nil {
+				log.Error().Err(err).Msg("failed to initialize logger")
+				return
+			}
+
 			ctx, cancel := context.WithCancel(cmd.Context())
 			s, err := newSVC(newProgram(ctx, cancel), newSVCConfig())
 			if err != nil {
@@ -71,6 +86,11 @@ var (
 		Use:   "restart",
 		Short: "Restart service",
 		Run: func(cmd *cobra.Command, args []string) {
+			if err := initLogger("console"); err != nil {
+				log.Error().Err(err).Msg("failed to initialize logger")
+				return
+			}
+
 			ctx, cancel := context.WithCancel(cmd.Context())
 			s, err := newSVC(newProgram(ctx, cancel), newSVCConfig())
 			if err != nil {
@@ -91,6 +111,11 @@ var (
 		Use:   "status",
 		Short: "Service status",
 		Run: func(cmd *cobra.Command, args []string) {
+			if err := initLogger("console"); err != nil {
+				log.Error().Err(err).Msg("failed to initialize logger")
+				return
+			}
+
 			ctx, cancel := context.WithCancel(cmd.Context())
 			s, err := newSVC(newProgram(ctx, cancel), newSVCConfig())
 			if err != nil {
@@ -117,3 +142,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	serviceRunCmd.Flags().StringVar(&logFile, "log-file", defaultLogFile, "log file path, if set \"console\" then will use console output")
+}

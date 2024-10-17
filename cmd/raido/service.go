@@ -67,11 +67,14 @@ func (p *program) Start(svc service.Service) error {
 	log.Info().Msg("starting Raido service")
 
 	split := strings.Split(serviceAddr, "://")
-	// cleanup failed close
-	stat, err := os.Stat(split[1])
-	if err == nil && !stat.IsDir() {
-		if err := os.Remove(split[1]); err != nil {
-			log.Error().Msg("failed to remove existing socket file")
+
+	if split[0] == "unix" {
+		// cleanup failed close
+		stat, err := os.Stat(split[1])
+		if err == nil && !stat.IsDir() {
+			if err := os.Remove(split[1]); err != nil {
+				log.Error().Msg("failed to remove existing socket file")
+			}
 		}
 	}
 
@@ -84,9 +87,11 @@ func (p *program) Start(svc service.Service) error {
 	go func() {
 		defer listen.Close()
 
-		if err := os.Chmod(split[1], 0666); err != nil {
-			log.Error().Msgf("failed setting service permissions: %v", split[1])
-			return
+		if split[0] == "unix" {
+			if err := os.Chmod(split[1], 0666); err != nil {
+				log.Error().Msgf("failed setting service permissions: %v", split[1])
+				return
+			}
 		}
 
 		s := app.NewServer(p.ctx, &config.ServiceServer{})

@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+var (
+	certFilePermMode = os.FileMode(0755)
+)
+
 // CertManager defines the interface for managing TLS configuration
 type CertManager interface {
 	GetTLSConfig() (*tls.Config, error)
@@ -137,7 +141,7 @@ func (cm *SelfSignedCertManager) generateSelfSignedCert() (*tls.Certificate, err
 	}
 
 	// Ensure the certificate directory exists
-	os.MkdirAll(cm.CertDir, 0755)
+	os.MkdirAll(cm.CertDir, certFilePermMode)
 
 	certOut, err := os.Create(cm.CertPath)
 	if err != nil {

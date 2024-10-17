@@ -14,6 +14,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	netFilePermMode = os.FileMode(0755)
+)
+
 type LinkTun struct {
 	link netlink.Link
 }
@@ -278,7 +282,7 @@ func (l *LinkTun) GetLoopbackRoute() (string, error) {
 //	    chmod 600 /dev/net/tun
 func createTunDevice() error {
 	// Create the /dev/net directory if it doesn't exist
-	err := os.MkdirAll("/dev/net", 0755)
+	err := os.MkdirAll("/dev/net", netFilePermMode)
 	if err != nil {
 		return fmt.Errorf("failed to create /dev/net: %v", err)
 	}

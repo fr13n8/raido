@@ -15,16 +15,6 @@ var (
 	rootCmd = &cobra.Command{
 		Use:          "raido",
 		SilenceUsage: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			log.Logger = log.Output(zerolog.ConsoleWriter{
-				Out: os.Stderr,
-				FormatTimestamp: func(i interface{}) string {
-					return ""
-				},
-			})
-
-			return nil
-		},
 	}
 )
 

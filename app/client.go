@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	pb "github.com/fr13n8/raido/proto/service"
@@ -26,15 +27,19 @@ func NewClient(ctx context.Context, cfg *config.ServiceDialer) *Client {
 	roundTripper := &http.Transport{
 		ForceAttemptHTTP2: true,
 	}
-
-	unixtransport.Register(roundTripper)
+	split := strings.Split(cfg.ServiceAddress, "://")
+	serviceAddr := split[1]
+	if split[0] == "unix" {
+		unixtransport.Register(roundTripper)
+		serviceAddr = "http+" + cfg.ServiceAddress + ":"
+	}
 
 	client := &http.Client{
 		Transport: roundTripper,
 		Timeout:   time.Second * 5,
 	}
 
-	dClient := serviceconnect.NewRaidoServiceClient(client, "http+"+cfg.ServiceAddress+":", connect.WithGRPC())
+	dClient := serviceconnect.NewRaidoServiceClient(client, serviceAddr, connect.WithGRPC())
 
 	return &Client{
 		serviceClient: dClient,
