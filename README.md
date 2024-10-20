@@ -131,5 +131,4 @@ And then from user host we can access this servere via loopback route.
 - Add new transport protocols for traffic tunneling
 - Add the ability to build chains of agents
 - Add multiplatform support
-- Support IPV6
 - FIX BUGS!

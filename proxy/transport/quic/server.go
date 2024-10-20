@@ -163,7 +163,7 @@ func (s *Server) StartHandshake(ctx context.Context, conn quic.Connection) {
 			log.Error().Err(err).Msg("failed to parse route")
 			continue
 		}
-		if !ip.IsLoopback() && ip.To4() != nil {
+		if !ip.IsLoopback() && !ip.IsLinkLocalUnicast() {
 			routes = append(routes, route)
 		}
 	}
