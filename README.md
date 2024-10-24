@@ -41,6 +41,8 @@ In this diagram, the client side starts the service and the Raido proxy server o
 - Network
   - TCP
   - UDP
+  - IPv4
+  - IPv6
 
 ## Requirements
 
