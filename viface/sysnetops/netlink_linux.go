@@ -33,19 +33,18 @@ func NewLinkTun() (*LinkTun, error) {
 	}
 
 	if err := netlink.LinkAdd(link); err != nil {
-		if os.IsExist(err) {
+		switch {
+		case os.IsExist(err):
 			log.Info().Msgf("interface \"%s\" already exists. Will reuse.", link.Attrs().Name)
 			return &LinkTun{link}, nil
-		}
-		if os.IsNotExist(err) {
+		case os.IsNotExist(err):
 			if err := createTunDevice(); err != nil {
 				return nil, fmt.Errorf("failed to create TUN device: %w", err)
 			}
-
 			if err := netlink.LinkAdd(link); err != nil {
 				return nil, fmt.Errorf("failed to add interface: %w", err)
 			}
-		} else {
+		default:
 			return nil, fmt.Errorf("failed to add interface: %w", err)
 		}
 	}
@@ -180,24 +179,6 @@ func (l *LinkTun) Status() string {
 
 func (l *LinkTun) Destroy() error {
 	if err := netlink.LinkDel(l.link); err != nil {
-		return fmt.Errorf("failed to delete interface \"%s\": %w", l.link.Attrs().Name, err)
-	}
-
-	return nil
-}
-
-func Destroy(name string) error {
-	l, err := GetLinkTunByName(name)
-	if err != nil {
-		return fmt.Errorf("failed to get interface \"%s\": %w", name, err)
-	}
-
-	link, err := netlink.LinkByName(l.link.Attrs().Name)
-	if err != nil {
-		return fmt.Errorf("failed to get interface by name \"%s\": %w", l.link.Attrs().Name, err)
-	}
-
-	if err := netlink.LinkDel(link); err != nil {
 		return fmt.Errorf("failed to delete interface \"%s\": %w", l.link.Attrs().Name, err)
 	}
 
