@@ -11,7 +11,6 @@ import (
 	"github.com/fr13n8/raido/config"
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/transport"
-	"github.com/lithammer/shortuuid/v4"
 	"github.com/quic-go/quic-go"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
@@ -43,16 +42,8 @@ func (s *Server) ShutdownGracefully(ctx context.Context) error {
 	defer close(s.connCh)
 	var errs []error
 
-	agents := s.agentManager.GetAgents()
-	for id, a := range agents {
-		if err := a.CloseTunnel(); err != nil {
-			errs = append(errs, err)
-		}
-		if err := a.Conn.CloseWithError(protocol.ApplicationOK, "server closing down"); err != nil {
-			errs = append(errs, err)
-		}
-
-		s.agentManager.RemoveAgent(id)
+	if err := s.agentManager.Cleanup(); err != nil {
+		errs = append(errs, err)
 	}
 
 	if err := s.listener.Close(); err != nil {
@@ -168,9 +159,8 @@ func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) 
 	}
 
 	// Add the new agent to the agent manager
-	agentiId := shortuuid.New()
 	a := agent.New(dec.Name, conn, routes)
-	s.agentManager.AddAgent(agentiId, a)
+	s.agentManager.AddAgent(a)
 
 	go func() {
 		for {
@@ -179,10 +169,10 @@ func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) 
 				var appErr *quic.ApplicationError
 				if errors.As(err, &appErr) {
 					if appErr.ErrorCode == protocol.ApplicationOK {
-						log.Info().Str("agent_id", agentiId).Msg("agent closed connection")
+						log.Info().Str("agent_id", a.ID).Msg("agent closed connection")
 
-						s.agentManager.RemoveAgent(agentiId)
-						if err := a.CloseTunnel(); err != nil {
+						s.agentManager.RemoveAgent(a.ID)
+						if err := a.TunnelClose(); err != nil {
 							log.Error().Err(err).Msg("failed to close tunnel")
 						}
 

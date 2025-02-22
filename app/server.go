@@ -106,13 +106,13 @@ func (s *ServiceHandler) ProxyStop(ctx context.Context, req *connect.Request[pb.
 
 func (s *ServiceHandler) AgentList(ctx context.Context, req *connect.Request[pb.Empty]) (*connect.Response[pb.AgentListResponse], error) {
 	log.Info().Any("req", req).Msg("GetAgents()")
-	agentsResponse := s.agentManager.GetAgents()
+	agentsResponse := s.agentManager.GetAllAgents()
 
 	agents := make(map[string]*pb.Agent, len(agentsResponse))
 	for id, a := range agentsResponse {
 		agents[id] = &pb.Agent{
-			Name:   a.Name,
-			Routes: a.Routes,
+			Name:   a.Hostname,
+			Routes: a.Routes(),
 		}
 	}
 
@@ -132,7 +132,7 @@ func (s *ServiceHandler) TunnelStart(ctx context.Context, req *connect.Request[p
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if err := a.StartTunnel(s.ctx, req.Msg.Routes); err != nil {
+	if err := a.TunnelStart(s.ctx, req.Msg.Routes); err != nil {
 		log.Error().Err(err).Msgf("failed to start tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("failed to start tunnel for \"%s\"", id)
 	}
@@ -151,7 +151,7 @@ func (s *ServiceHandler) TunnelStop(ctx context.Context, req *connect.Request[pb
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if err := a.CloseTunnel(); err != nil {
+	if err := a.TunnelClose(); err != nil {
 		log.Error().Err(err).Msgf("could not stop tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("could not stop tunnel for \"%s\"", id)
 	}
@@ -170,12 +170,7 @@ func (s *ServiceHandler) TunnelAddRoute(ctx context.Context, req *connect.Reques
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if a.Tunnel == nil {
-		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
-		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
-	}
-
-	if err := a.Tunnel.AddRoutes(req.Msg.Routes...); err != nil {
+	if err := a.TunnelAddRoutes(req.Msg.Routes...); err != nil {
 		log.Error().Err(err).Msgf("failed to add route to tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("failed to add route to tunnel for \"%s\"", id)
 	}
@@ -194,12 +189,7 @@ func (s *ServiceHandler) TunnelRemoveRoute(ctx context.Context, req *connect.Req
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if a.Tunnel == nil {
-		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
-		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
-	}
-
-	if err := a.Tunnel.RemoveRoutes(req.Msg.Routes...); err != nil {
+	if err := a.TunnelRemoveRoutes(req.Msg.Routes...); err != nil {
 		log.Error().Err(err).Msgf("failed to remove route from tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("failed to remove route from tunnel for \"%s\"", id)
 	}
@@ -218,12 +208,7 @@ func (s *ServiceHandler) TunnelPause(ctx context.Context, req *connect.Request[p
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if a.Tunnel == nil {
-		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
-		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
-	}
-
-	if err := a.Tunnel.Pause(); err != nil {
+	if err := a.TunnelPause(); err != nil {
 		log.Error().Err(err).Msgf("failed to pause tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("failed to pause tunnel for \"%s\"", id)
 	}
@@ -242,12 +227,7 @@ func (s *ServiceHandler) TunnelResume(ctx context.Context, req *connect.Request[
 		return nil, fmt.Errorf("agent with id \"%s\" doesnt exist", id)
 	}
 
-	if a.Tunnel == nil {
-		log.Error().Msgf("tunnel for agent \"%s\" is nil", id)
-		return nil, fmt.Errorf("tunnel for agent \"%s\" is nil", id)
-	}
-
-	if err := a.Tunnel.Resume(); err != nil {
+	if err := a.TunnelResume(); err != nil {
 		log.Error().Err(err).Msgf("failed to resume tunnel for \"%s\"", id)
 		return nil, fmt.Errorf("failed to resume tunnel for \"%s\"", id)
 	}
@@ -258,29 +238,24 @@ func (s *ServiceHandler) TunnelResume(ctx context.Context, req *connect.Request[
 func (s *ServiceHandler) TunnelList(ctx context.Context, req *connect.Request[pb.Empty]) (*connect.Response[pb.TunnelListResponse], error) {
 	log.Info().Any("req", req).Msg("AgentTunnelList()")
 
-	tunnels := make([]*pb.Tunnel, 0, len(s.agentManager.GetAgents()))
-	for id, a := range s.agentManager.GetAgents() {
-		if a.Tunnel == nil {
-			log.Info().Msgf("tunnel for agent \"%s\" is nil", id)
-			continue
-		}
-
-		routes, err := a.Tunnel.ActiveRoutes()
+	tunnels := make([]*pb.Tunnel, 0, len(s.agentManager.GetAllAgents()))
+	for id, a := range s.agentManager.GetAllAgents() {
+		routes, err := a.TunnelActiveRoutes()
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to get routes for \"%s\"", id)
 			continue
 		}
 
-		addr, err := a.Tunnel.GetLoopbackRoute()
+		addr, err := a.TunnelLoopbackRoute()
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to get address for \"%s\"", id)
 		}
 
 		tunnels = append(tunnels, &pb.Tunnel{
 			Routes:    routes,
-			Status:    a.Tunnel.Status(),
+			Status:    a.TunnelStatus(),
 			AgentId:   id,
-			Interface: a.Tunnel.Name(),
+			Interface: a.TunnelName(),
 			Loopback:  addr,
 		})
 	}
@@ -294,14 +269,9 @@ func (s *ServiceHandler) AgentRemove(ctx context.Context, req *connect.Request[p
 	log.Info().Any("req", req).Msg("AgentRemove()")
 
 	id := req.Msg.AgentId
-	a := s.agentManager.GetAgent(id)
-
-	s.agentManager.RemoveAgent(id)
-
-	a.Conn.CloseWithError(protocol.ApplicationOK, "server closing down")
-	if err := a.CloseTunnel(); err != nil {
-		log.Error().Err(err).Msgf("failed to close tunnel for \"%s\"", id)
-		return nil, fmt.Errorf("failed to close tunnel for \"%s", id)
+	if err := s.agentManager.RemoveAgent(id); err != nil {
+		log.Error().Err(err).Msgf("failed to remove agent with id \"%s\"", id)
+		return nil, fmt.Errorf("failed to remove agent with id \"%s\"", id)
 	}
 
 	return connect.NewResponse(&pb.Empty{}), nil
