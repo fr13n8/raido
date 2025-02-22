@@ -14,52 +14,59 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var (
-	netFilePermMode = os.FileMode(0755)
+const (
+	defaultTunName   = "raido%d"
+	defaultTunMode   = netlink.TUNTAP_MODE_TUN
+	netDeviceDir     = "/dev/net/"
+	tunDevicePath    = "/dev/net/tun"
+	loopbackNetwork  = "240.0.0.0/4"
+	loopbackMaskSize = 32
+	netFilePermMode  = os.FileMode(0755)
 )
 
 type LinkTun struct {
 	link netlink.Link
+	name string
 }
 
 func NewLinkTun() (*LinkTun, error) {
+	if err := ensureTunDevice(); err != nil {
+		return nil, fmt.Errorf("tun device setup failed: %w", err)
+	}
+
 	attrs := netlink.NewLinkAttrs()
-	attrs.Name = "raido%d"
+	attrs.Name = defaultTunName
 	attrs.OperState = netlink.OperUp
 
 	link := &netlink.Tuntap{
 		LinkAttrs: attrs,
-		Mode:      netlink.TUNTAP_MODE_TUN,
+		Mode:      defaultTunMode,
 	}
 
-	if err := netlink.LinkAdd(link); err != nil {
-		switch {
-		case os.IsExist(err):
-			log.Info().Msgf("interface \"%s\" already exists. Will reuse.", link.Attrs().Name)
-			return &LinkTun{link}, nil
-		case os.IsNotExist(err):
-			if err := createTunDevice(); err != nil {
-				return nil, fmt.Errorf("failed to create TUN device: %w", err)
-			}
-			if err := netlink.LinkAdd(link); err != nil {
-				return nil, fmt.Errorf("failed to add interface: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("failed to add interface: %w", err)
+	err := netlink.LinkAdd(link)
+	switch {
+	case err == nil:
+		log.Debug().Str("interface", link.Attrs().Name).Msg("Created new TUN interface")
+	case os.IsExist(err):
+		existing, err := netlink.LinkByName(link.Attrs().Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get existing TUN interface: %w", err)
 		}
+		link = existing.(*netlink.Tuntap)
+		log.Debug().Str("interface", link.Attrs().Name).Msg("Using existing TUN interface")
+	default:
+		return nil, fmt.Errorf("failed to create TUN interface: %w", err)
 	}
 
 	if err := netlink.LinkSetUp(link); err != nil {
+		_ = netlink.LinkDel(link)
 		return nil, fmt.Errorf("failed to bring up interface \"%s\": %w", link.Attrs().Name, err)
 	}
 
-	l := &LinkTun{link}
-
-	if err := l.AddLoopbackRoute(); err != nil {
-		return nil, fmt.Errorf("failed to add loopback route: %w", err)
-	}
-
-	return l, nil
+	return &LinkTun{
+		link: link,
+		name: link.Attrs().Name,
+	}, nil
 }
 
 // add the next available network address to the interface routes from the range 240.0.0.0/4
@@ -107,7 +114,10 @@ func GetLinkTunByName(name string) (*LinkTun, error) {
 		return nil, fmt.Errorf("failed to get interface by name: %w", err)
 	}
 
-	return &LinkTun{link}, nil
+	return &LinkTun{
+		link: link,
+		name: name,
+	}, nil
 }
 
 func (l *LinkTun) RemoveRoutes(routes ...string) error {
@@ -120,7 +130,7 @@ func (l *LinkTun) RemoveRoutes(routes ...string) error {
 		}
 
 		if err := l.removeRoute(ns); err != nil {
-			errs = append(errs, fmt.Errorf("error netlink remove route \"%s\" from interface \"%s\": %w", route, l.link.Attrs().Name, err))
+			errs = append(errs, fmt.Errorf("error netlink remove route \"%s\" from interface \"%s\": %w", route, l.name, err))
 		}
 	}
 
@@ -140,24 +150,16 @@ func (l *LinkTun) AddRoutes(routes ...string) error {
 			LinkIndex: l.link.Attrs().Index,
 			Dst:       ns.Network,
 		}); err != nil && !errors.Is(err, syscall.EEXIST) && !errors.Is(err, syscall.EAFNOSUPPORT) {
-			errs = append(errs, fmt.Errorf("error netlink add route \"%s\" to interface \"%s\": %w", route, l.link.Attrs().Name, err))
+			errs = append(errs, fmt.Errorf("error netlink add route \"%s\" to interface \"%s\": %w", route, l.name, err))
 		}
 	}
 
 	return errors.Join(errs...)
 }
 
-func (l *LinkTun) SetMTU(mtu int) error {
-	if err := netlink.LinkSetMTU(l.link, mtu); err != nil {
-		return fmt.Errorf("error setting MTU on interface: \"%s\": %w", l.link.Attrs().Name, err)
-	}
-
-	return nil
-}
-
 func (l *LinkTun) SetDown() error {
 	if err := netlink.LinkSetDown(l.link); err != nil {
-		return fmt.Errorf("failed to DOWN interface \"%s\": %w", l.link.Attrs().Name, err)
+		return fmt.Errorf("failed to DOWN interface \"%s\": %w", l.name, err)
 	}
 
 	l.link.Attrs().OperState = netlink.OperDown
@@ -166,7 +168,7 @@ func (l *LinkTun) SetDown() error {
 
 func (l *LinkTun) SetUp() error {
 	if err := netlink.LinkSetUp(l.link); err != nil {
-		return fmt.Errorf("failed to UP interface \"%s\": %w", l.link.Attrs().Name, err)
+		return fmt.Errorf("failed to UP interface \"%s\": %w", l.name, err)
 	}
 
 	l.link.Attrs().OperState = netlink.OperUp
@@ -179,7 +181,7 @@ func (l *LinkTun) Status() string {
 
 func (l *LinkTun) Destroy() error {
 	if err := netlink.LinkDel(l.link); err != nil {
-		return fmt.Errorf("failed to delete interface \"%s\": %w", l.link.Attrs().Name, err)
+		return fmt.Errorf("failed to delete interface \"%s\": %w", l.name, err)
 	}
 
 	return nil
@@ -215,7 +217,7 @@ func GetTunTaps() ([]LinkTun, error) {
 }
 
 func (l *LinkTun) Name() string {
-	return l.link.Attrs().Name
+	return l.name
 }
 
 func (l *LinkTun) Routes() ([]string, error) {
@@ -261,26 +263,24 @@ func (l *LinkTun) GetLoopbackRoute() (string, error) {
 //	mkdir -p /dev/net && \
 //	    mknod /dev/net/tun c 10 200 && \
 //	    chmod 600 /dev/net/tun
-func createTunDevice() error {
+func ensureTunDevice() error {
 	// Create the /dev/net directory if it doesn't exist
-	err := os.MkdirAll("/dev/net", netFilePermMode)
-	if err != nil {
-		return fmt.Errorf("failed to create /dev/net: %v", err)
+	if err := os.MkdirAll(netDeviceDir, netFilePermMode); err != nil {
+		return fmt.Errorf("failed to create network device directory: %w", err)
 	}
 
 	// Check if the /dev/net/tun device already exists
-	if _, err := os.Stat("/dev/net/tun"); os.IsNotExist(err) {
+	if _, err := os.Stat(tunDevicePath); os.IsNotExist(err) {
 		// Create the /dev/net/tun device node with major number 10 and minor number 200
-		err = unix.Mknod("/dev/net/tun", unix.S_IFCHR|0600, int(unix.Mkdev(10, 200)))
-		if err != nil {
-			return fmt.Errorf("failed to create /dev/net/tun: %v", err)
+		if err = unix.Mknod(tunDevicePath, unix.S_IFCHR|0600, int(unix.Mkdev(10, 200))); err != nil {
+			return fmt.Errorf("failed to create tun device: %w", err)
 		}
 	}
 
 	// Change permissions of /dev/net/tun to 600
-	err = os.Chmod("/dev/net/tun", 0600)
+	err := os.Chmod(tunDevicePath, 0600)
 	if err != nil {
-		return fmt.Errorf("failed to change permissions for /dev/net/tun: %v", err)
+		return fmt.Errorf("failed to change permissions of tun device: %w", err)
 	}
 
 	return nil

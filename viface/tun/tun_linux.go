@@ -15,8 +15,8 @@ import (
 type NetTun struct {
 	name string
 	fd   int
-	stack.LinkEndpoint
-	mtu uint32
+	ep   stack.LinkEndpoint
+	mtu  uint32
 }
 
 // Open initializes the TUN device, retrieves the MTU, and creates the LinkEndpoint.
@@ -52,23 +52,23 @@ func Open(name string) (TUNDevice, error) {
 	}
 
 	return &NetTun{
-		name:         name,
-		mtu:          _mtu,
-		fd:           fd,
-		LinkEndpoint: lep,
+		name: name,
+		mtu:  _mtu,
+		fd:   fd,
+		ep:   lep,
 	}, nil
 }
 
 // Close gracefully closes the TUN device and its associated resources.
 func (t *NetTun) Close() error {
-	defer t.LinkEndpoint.Close()
+	defer t.ep.Close()
 	// Close the file descriptor for the TUN device.
 	return unix.Close(t.fd)
 }
 
-// Dev returns the LinkEndpoint for the TUN device.
-func (t *NetTun) Dev() stack.LinkEndpoint {
-	return t.LinkEndpoint
+// Device returns the LinkEndpoint for the TUN device.
+func (t *NetTun) Device() stack.LinkEndpoint {
+	return t.ep
 }
 
 // Name returns the name of the TUN device.

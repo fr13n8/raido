@@ -171,9 +171,8 @@ func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) 
 					if appErr.ErrorCode == protocol.ApplicationOK {
 						log.Info().Str("agent_id", a.ID).Msg("agent closed connection")
 
-						s.agentManager.RemoveAgent(a.ID)
-						if err := a.TunnelClose(); err != nil {
-							log.Error().Err(err).Msg("failed to close tunnel")
+						if err := s.agentManager.RemoveAgent(a.ID); err != nil {
+							log.Error().Err(err).Str("agent_id", a.ID).Msg("failed to remove agent")
 						}
 
 						return

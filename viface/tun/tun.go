@@ -7,5 +7,5 @@ import (
 // TUNDevice abstracts a virtual network TUN device.
 type TUNDevice interface {
 	Name() string
-	Dev() stack.LinkEndpoint
+	Device() stack.LinkEndpoint
 }

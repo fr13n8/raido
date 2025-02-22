@@ -24,12 +24,16 @@ func NewTunnel(ctx context.Context, conn transport.StreamConn) (*Tunnel, error) 
 		return nil, fmt.Errorf("failed to create TUN interface: %w", err)
 	}
 
+	if err := link.AddLoopbackRoute(); err != nil {
+		return nil, fmt.Errorf("failed to add loopback route: %w", err)
+	}
+
 	tun, err := tun.Open(link.Name())
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TUN device: %w", err)
 	}
 
-	s, err := netstack.NewNetStack(ctx, tun.Dev(), conn)
+	s, err := netstack.NewNetStack(ctx, tun.Device(), conn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create network stack: %w", err)
 	}
@@ -42,7 +46,7 @@ func NewTunnel(ctx context.Context, conn transport.StreamConn) (*Tunnel, error) 
 }
 
 func (t *Tunnel) Close() error {
-	t.device.Dev().Close()
+	t.device.Device().Close()
 	t.stack.Close()
 
 	if err := t.link.Destroy(); err != nil {
