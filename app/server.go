@@ -14,7 +14,10 @@ import (
 	"github.com/fr13n8/raido/agent"
 	"github.com/fr13n8/raido/config"
 	"github.com/fr13n8/raido/proxy/protocol"
+	"github.com/fr13n8/raido/proxy/transport"
+	"github.com/fr13n8/raido/proxy/transport/core"
 	"github.com/fr13n8/raido/proxy/transport/quic"
+	"github.com/fr13n8/raido/proxy/transport/tcp"
 	"github.com/fr13n8/raido/utils/certs"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/http2"
@@ -26,7 +29,7 @@ var _ serviceconnect.RaidoServiceHandler = (*ServiceHandler)(nil)
 
 type ServiceHandler struct {
 	agentManager        *agent.Manager
-	proxyServerInstance *quic.Server
+	proxyServerInstance *core.Server
 	ctx                 context.Context
 	proxyCancell        context.CancelFunc
 	serviceconnect.UnimplementedRaidoServiceHandler
@@ -41,6 +44,7 @@ func (s *ServiceHandler) ProxyStart(ctx context.Context, req *connect.Request[pb
 	}
 
 	proxyAddr := req.Msg.ProxyAddress
+	transportProtocol := req.Msg.TransportProtocol
 
 	cm := certs.NewSelfSignedCertManager("raido_proxy", config.RaidoPath)
 	tc, err := cm.GetTLSConfig()
@@ -50,12 +54,17 @@ func (s *ServiceHandler) ProxyStart(ctx context.Context, req *connect.Request[pb
 	}
 	tc.NextProtos = []string{protocol.Name}
 
-	pCfg := &config.ProxyServer{
-		Address:   proxyAddr,
-		TLSConfig: tc,
+	var transportImpl transport.Transport
+	switch transportProtocol {
+	case "quic":
+		transportImpl = quic.NewQUICTransport(tc)
+	case "tcp":
+		transportImpl = tcp.NewTCPTransport(tc)
+	default:
+		return nil, fmt.Errorf("unsupported transport protocol: %s", transportProtocol)
 	}
 
-	s.proxyServerInstance, err = quic.NewServer(pCfg)
+	s.proxyServerInstance, err = core.NewServer(ctx, transportImpl, proxyAddr)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create proxy server")
 		return nil, fmt.Errorf("failed to create proxy server")

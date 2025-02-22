@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/fr13n8/raido/proxy/tunnel"
-	"github.com/quic-go/quic-go"
 )
 
 type Agent struct {
 	Name   string
-	Conn   quic.Connection
+	Conn   transport.StreamConn
 	Routes []string
 	Tunnel *tunnel.Tunnel
 }
 
-func New(name string, conn quic.Connection, routes []string) *Agent {
+func New(name string, conn transport.StreamConn, routes []string) *Agent {
 	return &Agent{
 		Name:   name,
 		Conn:   conn,

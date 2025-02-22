@@ -15,12 +15,6 @@ type ProxyServer struct {
 	TLSConfig *tls.Config
 }
 
-type ProxyDialer struct {
-	ProxyAddress string
-	RetryCount   uint8
-	TLSConfig    *tls.Config
-}
-
 type ServiceServer struct {
 	Address   string
 	TLSConfig *tls.Config

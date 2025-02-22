@@ -15,9 +15,11 @@ import (
 	"syscall"
 
 	"github.com/fr13n8/raido/proxy/protocol"
+	"github.com/fr13n8/raido/proxy/transport"
+	"github.com/fr13n8/raido/proxy/transport/core"
 	"github.com/fr13n8/raido/proxy/transport/quic"
+	"github.com/fr13n8/raido/proxy/transport/tcp"
 
-	"github.com/fr13n8/raido/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -27,6 +29,7 @@ func main() {
 	proxyAddress := flagSet.String("pa", "", "relay address to connect to (e.g., 192.168.100.7:3333)")
 	insecureSkipVerify := flagSet.Bool("isk", false, "skip TLS certficate verification")
 	certHash := flagSet.String("ch", "", "certificate hash for accepting self-signed certificates")
+	transportProtocol := flagSet.String("tp", "quic", "transport protocol (quic, tcp)")
 
 	flagSet.Usage = func() {
 		fmt.Fprintln(os.Stderr, `Start agent.
@@ -73,16 +76,11 @@ Flags:`)
 			if err != nil {
 				return fmt.Errorf("failed to decode certificate hash: %w", err)
 			}
-			if bytes.Compare(crtMatch, crtFingerprint[:]) != 0 {
+			if !bytes.Equal(crtMatch, crtFingerprint[:]) {
 				return fmt.Errorf("certificate hash mismatch %x != %x", crtMatch, crtFingerprint[:])
 			}
 			return nil
 		}
-	}
-
-	dialerConf := &config.ProxyDialer{
-		ProxyAddress: *proxyAddress,
-		TLSConfig:    tlsConfig,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -91,7 +89,17 @@ Flags:`)
 		stop()
 	}()
 
-	d := quic.NewDialer(ctx, dialerConf)
+	var transportImpl transport.Transport
+	switch *transportProtocol {
+	case "quic":
+		transportImpl = quic.NewQUICTransport(tlsConfig)
+	case "tcp":
+		transportImpl = tcp.NewTCPTransport(tlsConfig)
+	default:
+		log.Fatal().Msgf("unsupported transport protocol: %s", *transportProtocol)
+	}
+
+	d := core.NewDialer(ctx, transportImpl, *proxyAddress)
 
 	// go func() {
 	// 	http.Handle("/prometheus", promhttp.Handler())

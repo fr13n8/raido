@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	connectrpc.com/connect v1.17.0
+	github.com/hashicorp/yamux v0.1.2
 	github.com/kardianos/service v1.2.2
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/quic-go/quic-go v0.48.2

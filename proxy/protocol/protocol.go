@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-
-	"github.com/quic-go/quic-go"
 )
 
 // Constants representing the VPN name and transport protocols (TCP, UDP, ICMP).
@@ -104,7 +102,7 @@ func Decode(encoded []byte) (*IPAddressWithPortProtocol, error) {
 
 // Constants representing QUIC application error codes.
 const (
-	ApplicationOK = quic.ApplicationErrorCode(0x0)
+	ApplicationOK = 0x0
 )
 
 // Commands for communication within the VPN protocol.

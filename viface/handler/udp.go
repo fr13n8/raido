@@ -7,8 +7,8 @@ import (
 
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/relay"
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/fr13n8/raido/utils/ip"
-	"github.com/quic-go/quic-go"
 	"github.com/rs/zerolog/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -16,7 +16,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func UDP(ctx context.Context, conn quic.Connection, fr *udp.ForwarderRequest) {
+func UDP(ctx context.Context, conn transport.StreamConn, fr *udp.ForwarderRequest) {
 	// Create endpoint as quickly as possible to avoid UDP
 	// race conditions, when user sends multiple frames
 	// one after another.
@@ -37,7 +37,7 @@ func UDP(ctx context.Context, conn quic.Connection, fr *udp.ForwarderRequest) {
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 
 	// Open the QUIC stream asynchronously to avoid blocking
-	stream, err := conn.OpenStreamSync(ctx)
+	stream, err := conn.OpenStream(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not open QUIC stream with target")
 		return

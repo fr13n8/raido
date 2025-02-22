@@ -13,12 +13,13 @@ import (
 )
 
 var (
-	proxyAddr   string
-	serviceAddr string
-	agentId     string
-	routes      []string
-	proxyDomain string
-	logFile     string
+	proxyAddr     string
+	proxyProtocol string
+	serviceAddr   string
+	agentId       string
+	routes        []string
+	proxyDomain   string
+	logFile       string
 )
 
 var (

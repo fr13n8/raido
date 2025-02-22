@@ -15,8 +15,8 @@ import (
 type NetTun struct {
 	name string
 	fd   int
-	mtu  uint32
 	stack.LinkEndpoint
+	mtu uint32
 }
 
 // Open initializes the TUN device, retrieves the MTU, and creates the LinkEndpoint.
@@ -52,9 +52,9 @@ func Open(name string) (TUNDevice, error) {
 	}
 
 	return &NetTun{
-		name: name,
-		mtu:  _mtu,
-		fd:   fd,
+		name:         name,
+		mtu:          _mtu,
+		fd:           fd,
 		LinkEndpoint: lep,
 	}, nil
 }
@@ -75,4 +75,3 @@ func (t *NetTun) Dev() stack.LinkEndpoint {
 func (t *NetTun) Name() string {
 	return t.name
 }
-

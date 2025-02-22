@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/fr13n8/raido/viface/handler"
-	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -42,7 +42,7 @@ func tcpUseSynCookies(v bool) Option {
 	}
 }
 
-func tcpHandler(ctx context.Context, conn quic.Connection) Option {
+func tcpHandler(ctx context.Context, conn transport.StreamConn) Option {
 	return func(s *stack.Stack) error {
 		// Set the TCP forwarder with a larger backlog size to handle more concurrent connections.
 		tcpForwarder := tcp.NewForwarder(s, 0, 1024, func(fr *tcp.ForwarderRequest) {

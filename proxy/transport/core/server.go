@@ -1,4 +1,4 @@
-package quic
+package core
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/fr13n8/raido/agent"
 	"github.com/fr13n8/raido/config"
 	"github.com/fr13n8/raido/proxy/protocol"
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/quic-go/quic-go"
 	"github.com/rs/zerolog/log"
@@ -17,24 +18,22 @@ import (
 )
 
 type Server struct {
-	config       *config.ProxyServer
-	listener     *quic.Listener
+	listener     transport.StreamListener
 	agentManager *agent.Manager
-	connCh       chan quic.Connection
+	connCh       chan transport.StreamConn
 	workerLimit  int
 }
 
-func NewServer(conf *config.ProxyServer) (*Server, error) {
-	quicListener, err := quic.ListenAddr(conf.Address, conf.TLSConfig, qConf)
+func NewServer(ctx context.Context, tr transport.Transport, address string) (*Server, error) {
+	listener, err := tr.Listen(ctx, address)
 	if err != nil {
-		return nil, fmt.Errorf("could not listen on QUIC address: %w", err)
+		return nil, fmt.Errorf("could not listen on address: %w", err)
 	}
 
 	return &Server{
-		config:       conf,
-		listener:     quicListener,
+		listener:     listener,
 		agentManager: agent.NewAgentManager(),
-		connCh:       make(chan quic.Connection),
+		connCh:       make(chan transport.StreamConn),
 		workerLimit:  runtime.NumCPU(), // Limit for concurrent goroutines
 	}, nil
 }
@@ -73,7 +72,7 @@ func (s *Server) Listen(ctx context.Context) error {
 
 	// Connection processing goroutine
 	g.Go(func() error {
-		s.ProcessConnection(ctx)
+		s.processConnection(ctx)
 		return nil
 	})
 
@@ -116,20 +115,20 @@ func (s *Server) Listen(ctx context.Context) error {
 	return g.Wait()
 }
 
-func (s *Server) ProcessConnection(ctx context.Context) {
+func (s *Server) processConnection(ctx context.Context) {
 	sem := make(chan struct{}, s.workerLimit) // Semaphore to limit goroutines
 
 	for conn := range s.connCh {
 		sem <- struct{}{} // Acquire a semaphore spot
-		go func(conn quic.Connection) {
+		go func(conn transport.StreamConn) {
 			defer func() { <-sem }() // Release semaphore spot
-			s.StartHandshake(ctx, conn)
+			s.startHandshake(ctx, conn)
 		}(conn)
 	}
 }
 
-func (s *Server) StartHandshake(ctx context.Context, conn quic.Connection) {
-	stream, err := conn.OpenStreamSync(ctx)
+func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) {
+	stream, err := conn.OpenStream(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to open stream")
 		return

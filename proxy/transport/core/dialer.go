@@ -1,8 +1,7 @@
-package quic
+package core
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -11,9 +10,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/fr13n8/raido/config"
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/relay"
+	"github.com/fr13n8/raido/proxy/transport"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -22,32 +21,30 @@ import (
 )
 
 type Dialer struct {
-	quicAddress string
-	streamCh    chan quic.Stream
-	qConf       *quic.Config
-	tlsConf     *tls.Config
+	address  string
+	streamCh chan transport.Stream
+	tr       transport.Transport
 }
 
-func NewDialer(ctx context.Context, conf *config.ProxyDialer) *Dialer {
+func NewDialer(ctx context.Context, tr transport.Transport, address string) *Dialer {
 	return &Dialer{
-		quicAddress: conf.ProxyAddress,
-		streamCh:    make(chan quic.Stream, runtime.NumCPU()), // Buffered channel to avoid blocking
-		qConf:       qConf,
-		tlsConf:     conf.TLSConfig,
+		streamCh: make(chan transport.Stream, runtime.NumCPU()), // Buffered channel to avoid blocking
+		tr:       tr,
+		address:  address,
 	}
 }
 
 func (d *Dialer) dialAndServer(ctx context.Context) error {
-	log.Info().Msgf("attempting connection to %s", d.quicAddress)
-	conn, err := quic.DialAddr(ctx, d.quicAddress, d.tlsConf, d.qConf)
+	log.Info().Msgf("attempting connection to %s", d.address)
+	conn, err := d.tr.Dial(ctx, d.address)
 	if err != nil {
-		return fmt.Errorf("could not dial QUIC address: %w", err)
+		return fmt.Errorf("could not dial address: %w", err)
 	}
 
-	log.Info().Msgf("starting dialing to %s", d.quicAddress)
+	log.Info().Msgf("starting dialing to %s", d.address)
 	var g errgroup.Group
 
-	ctx, stop := context.WithCancel(ctx)
+	// ctx, stop := context.WithCancel(ctx)
 	// Handle context cancellation and connection closing
 	g.Go(func() error {
 		<-ctx.Done()
@@ -56,30 +53,35 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 		return conn.CloseWithError(protocol.ApplicationOK, "client closing down")
 	})
 
-	// Process QUIC streams
+	// Process streams
 	g.Go(func() error {
 		for {
-			stream, err := conn.AcceptStream(ctx)
-			if err != nil {
-				var appErr *quic.ApplicationError
-				if errors.As(err, &appErr) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					log.Info().Msg("connection closed")
-					break
+			select {
+			case <-ctx.Done():
+				log.Info().Msg("context cancelled")
+				return nil
+			default:
+				stream, err := conn.AcceptStream(ctx)
+				if err != nil {
+					var appErr *quic.ApplicationError
+					if errors.As(err, &appErr) ||
+						errors.Is(err, context.Canceled) ||
+						errors.Is(err, context.DeadlineExceeded) {
+						log.Info().Msg("connection closed")
+						break
+					}
+
+					log.Error().Err(err).Msg("failed to accept stream")
+					continue
 				}
-
-				log.Error().Err(err).Msg("failed to accept QUIC stream")
-				continue
+				d.streamCh <- stream
 			}
-			d.streamCh <- stream
 		}
-
-		stop()
-		return nil
 	})
 
-	// Start worker pool to process QUIC streams
+	// Start worker pool to process streams
 	g.Go(func() error {
-		d.ProcessConnection(ctx)
+		d.processConnection(ctx)
 
 		log.Info().Msg("connection processing stopped")
 		return nil
@@ -103,20 +105,20 @@ func (d *Dialer) Run(ctx context.Context) error {
 	})
 }
 
-func (d *Dialer) ProcessConnection(ctx context.Context) {
+func (d *Dialer) processConnection(ctx context.Context) {
 	workerCount := runtime.NumCPU()
 	sem := make(chan struct{}, workerCount)
 
 	for stream := range d.streamCh {
 		sem <- struct{}{} // Acquire a worker slot
-		go func(s quic.Stream) {
-			defer func() { <-sem }()   // Release worker slot when done
-			d.handleQUICStream(ctx, s) // Process the stream
+		go func(s transport.Stream) {
+			defer func() { <-sem }() // Release worker slot when done
+			d.handleStream(ctx, s)   // Process the stream
 		}(stream)
 	}
 }
 
-func (d *Dialer) handleQUICStream(ctx context.Context, stream quic.Stream) {
+func (d *Dialer) handleStream(ctx context.Context, stream transport.Stream) {
 	decoder := protocol.NewDecoder[protocol.Data](stream)
 	dec, err := decoder.Decode()
 	if err != nil {
@@ -134,7 +136,7 @@ func (d *Dialer) handleQUICStream(ctx context.Context, stream quic.Stream) {
 	}
 }
 
-func (d *Dialer) handleGetRoutesRequest(stream quic.Stream) {
+func (d *Dialer) handleGetRoutesRequest(stream transport.Stream) {
 	addrs, err := GetNetRoutes()
 	if err != nil {
 		log.Error().Err(err).Msg("could not get network routes")
@@ -150,7 +152,7 @@ func (d *Dialer) handleGetRoutesRequest(stream quic.Stream) {
 	}
 }
 
-func (d *Dialer) handleConnectionRequest(ctx context.Context, stream quic.Stream, dec protocol.Data) {
+func (d *Dialer) handleConnectionRequest(ctx context.Context, stream transport.Stream, dec protocol.Data) {
 	connRequest, err := protocol.Decode(dec.Body)
 	if err != nil {
 		log.Error().Err(err).Msg("could not decode connection request")
@@ -162,7 +164,7 @@ func (d *Dialer) handleConnectionRequest(ctx context.Context, stream quic.Stream
 
 	encoder := protocol.NewEncoder[protocol.ConnectResponse](stream)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	targetConn, err := (&net.Dialer{}).DialContext(ctx, network+version, net.JoinHostPort(connRequest.IP.String(), fmt.Sprintf("%d", connRequest.Port)))
 	if err != nil {

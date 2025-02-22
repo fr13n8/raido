@@ -7,8 +7,8 @@ import (
 
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/relay"
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/fr13n8/raido/utils/ip"
-	"github.com/quic-go/quic-go"
 	"github.com/rs/zerolog/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -16,7 +16,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func TCP(ctx context.Context, conn quic.Connection, fr *tcp.ForwarderRequest) {
+func TCP(ctx context.Context, conn transport.StreamConn, fr *tcp.ForwarderRequest) {
 	// Create a waiter queue and TCP endpoint for the forwarded connection.
 	var wq waiter.Queue
 	ep, tcperr := fr.CreateEndpoint(&wq)
@@ -37,7 +37,7 @@ func TCP(ctx context.Context, conn quic.Connection, fr *tcp.ForwarderRequest) {
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 
 	// Open a QUIC stream to communicate with the target.
-	stream, err := conn.OpenStreamSync(ctx)
+	stream, err := conn.OpenStream(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not open QUIC stream with target")
 		return

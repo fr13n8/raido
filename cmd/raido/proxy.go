@@ -31,7 +31,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			c := cmd.Context().Value(app.ClientKey{}).(*app.Client)
 
-			certHash, err := c.ProxyStart(cmd.Context(), proxyAddr)
+			certHash, err := c.ProxyStart(cmd.Context(), proxyAddr, proxyProtocol)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to start proxy")
 				return
@@ -60,6 +60,7 @@ var (
 
 func init() {
 	proxyStartCmd.Flags().StringVar(&proxyAddr, "proxy-addr", "0.0.0.0:8787", "Proxy listen address (e.g., :8787)")
+	proxyStartCmd.Flags().StringVar(&proxyProtocol, "proxy-protocol", "quic", "Proxy type (e.g., quic, tcp)")
 
 	proxyCmd.AddCommand(
 		proxyStartCmd, proxyStopCmd,

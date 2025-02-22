@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/quic-go/quic-go"
+	"github.com/fr13n8/raido/proxy/transport"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -14,7 +14,7 @@ import (
 )
 
 // NewNetStack creates and configures a new network stack.
-func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn quic.Connection) (*stack.Stack, error) {
+func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn transport.StreamConn) (*stack.Stack, error) {
 	// Initialize the network stack with the necessary protocols.
 	s := stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocolFactory{

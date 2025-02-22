@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/fr13n8/raido/viface/netstack"
 	"github.com/fr13n8/raido/viface/sysnetops"
 	"github.com/fr13n8/raido/viface/tun"
-	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -18,7 +18,7 @@ type Tunnel struct {
 	activeRoutes []string
 }
 
-func NewTunnel(ctx context.Context, conn quic.Connection) (*Tunnel, error) {
+func NewTunnel(ctx context.Context, conn transport.StreamConn) (*Tunnel, error) {
 	link, err := sysnetops.NewLinkTun()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TUN interface: %w", err)

@@ -63,22 +63,6 @@ const (
 	RaidoServiceTunnelRemoveRouteProcedure = "/service.RaidoService/TunnelRemoveRoute"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	raidoServiceServiceDescriptor                 = service.File_service_proto.Services().ByName("RaidoService")
-	raidoServiceProxyStartMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("ProxyStart")
-	raidoServiceProxyStopMethodDescriptor         = raidoServiceServiceDescriptor.Methods().ByName("ProxyStop")
-	raidoServiceAgentListMethodDescriptor         = raidoServiceServiceDescriptor.Methods().ByName("AgentList")
-	raidoServiceAgentRemoveMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("AgentRemove")
-	raidoServiceTunnelListMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("TunnelList")
-	raidoServiceTunnelStartMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("TunnelStart")
-	raidoServiceTunnelStopMethodDescriptor        = raidoServiceServiceDescriptor.Methods().ByName("TunnelStop")
-	raidoServiceTunnelPauseMethodDescriptor       = raidoServiceServiceDescriptor.Methods().ByName("TunnelPause")
-	raidoServiceTunnelResumeMethodDescriptor      = raidoServiceServiceDescriptor.Methods().ByName("TunnelResume")
-	raidoServiceTunnelAddRouteMethodDescriptor    = raidoServiceServiceDescriptor.Methods().ByName("TunnelAddRoute")
-	raidoServiceTunnelRemoveRouteMethodDescriptor = raidoServiceServiceDescriptor.Methods().ByName("TunnelRemoveRoute")
-)
-
 // RaidoServiceClient is a client for the service.RaidoService service.
 type RaidoServiceClient interface {
 	ProxyStart(context.Context, *connect.Request[service.ProxyStartRequest]) (*connect.Response[service.ProxyStartResponse], error)
@@ -103,71 +87,72 @@ type RaidoServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewRaidoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) RaidoServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	raidoServiceMethods := service.File_service_proto.Services().ByName("RaidoService").Methods()
 	return &raidoServiceClient{
 		proxyStart: connect.NewClient[service.ProxyStartRequest, service.ProxyStartResponse](
 			httpClient,
 			baseURL+RaidoServiceProxyStartProcedure,
-			connect.WithSchema(raidoServiceProxyStartMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("ProxyStart")),
 			connect.WithClientOptions(opts...),
 		),
 		proxyStop: connect.NewClient[service.Empty, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceProxyStopProcedure,
-			connect.WithSchema(raidoServiceProxyStopMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("ProxyStop")),
 			connect.WithClientOptions(opts...),
 		),
 		agentList: connect.NewClient[service.Empty, service.AgentListResponse](
 			httpClient,
 			baseURL+RaidoServiceAgentListProcedure,
-			connect.WithSchema(raidoServiceAgentListMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("AgentList")),
 			connect.WithClientOptions(opts...),
 		),
 		agentRemove: connect.NewClient[service.AgentRemoveRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceAgentRemoveProcedure,
-			connect.WithSchema(raidoServiceAgentRemoveMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("AgentRemove")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelList: connect.NewClient[service.Empty, service.TunnelListResponse](
 			httpClient,
 			baseURL+RaidoServiceTunnelListProcedure,
-			connect.WithSchema(raidoServiceTunnelListMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelList")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelStart: connect.NewClient[service.TunnelStartRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceTunnelStartProcedure,
-			connect.WithSchema(raidoServiceTunnelStartMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelStart")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelStop: connect.NewClient[service.TunnelStopRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceTunnelStopProcedure,
-			connect.WithSchema(raidoServiceTunnelStopMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelStop")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelPause: connect.NewClient[service.TunnelPauseRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceTunnelPauseProcedure,
-			connect.WithSchema(raidoServiceTunnelPauseMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelPause")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelResume: connect.NewClient[service.TunnelResumeRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceTunnelResumeProcedure,
-			connect.WithSchema(raidoServiceTunnelResumeMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelResume")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelAddRoute: connect.NewClient[service.TunnelAddRouteRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceTunnelAddRouteProcedure,
-			connect.WithSchema(raidoServiceTunnelAddRouteMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelAddRoute")),
 			connect.WithClientOptions(opts...),
 		),
 		tunnelRemoveRoute: connect.NewClient[service.TunnelRemoveRouteRequest, service.Empty](
 			httpClient,
 			baseURL+RaidoServiceTunnelRemoveRouteProcedure,
-			connect.WithSchema(raidoServiceTunnelRemoveRouteMethodDescriptor),
+			connect.WithSchema(raidoServiceMethods.ByName("TunnelRemoveRoute")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -264,70 +249,71 @@ type RaidoServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewRaidoServiceHandler(svc RaidoServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	raidoServiceMethods := service.File_service_proto.Services().ByName("RaidoService").Methods()
 	raidoServiceProxyStartHandler := connect.NewUnaryHandler(
 		RaidoServiceProxyStartProcedure,
 		svc.ProxyStart,
-		connect.WithSchema(raidoServiceProxyStartMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("ProxyStart")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceProxyStopHandler := connect.NewUnaryHandler(
 		RaidoServiceProxyStopProcedure,
 		svc.ProxyStop,
-		connect.WithSchema(raidoServiceProxyStopMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("ProxyStop")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceAgentListHandler := connect.NewUnaryHandler(
 		RaidoServiceAgentListProcedure,
 		svc.AgentList,
-		connect.WithSchema(raidoServiceAgentListMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("AgentList")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceAgentRemoveHandler := connect.NewUnaryHandler(
 		RaidoServiceAgentRemoveProcedure,
 		svc.AgentRemove,
-		connect.WithSchema(raidoServiceAgentRemoveMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("AgentRemove")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelListHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelListProcedure,
 		svc.TunnelList,
-		connect.WithSchema(raidoServiceTunnelListMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelList")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelStartHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelStartProcedure,
 		svc.TunnelStart,
-		connect.WithSchema(raidoServiceTunnelStartMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelStart")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelStopHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelStopProcedure,
 		svc.TunnelStop,
-		connect.WithSchema(raidoServiceTunnelStopMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelStop")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelPauseHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelPauseProcedure,
 		svc.TunnelPause,
-		connect.WithSchema(raidoServiceTunnelPauseMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelPause")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelResumeHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelResumeProcedure,
 		svc.TunnelResume,
-		connect.WithSchema(raidoServiceTunnelResumeMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelResume")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelAddRouteHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelAddRouteProcedure,
 		svc.TunnelAddRoute,
-		connect.WithSchema(raidoServiceTunnelAddRouteMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelAddRoute")),
 		connect.WithHandlerOptions(opts...),
 	)
 	raidoServiceTunnelRemoveRouteHandler := connect.NewUnaryHandler(
 		RaidoServiceTunnelRemoveRouteProcedure,
 		svc.TunnelRemoveRoute,
-		connect.WithSchema(raidoServiceTunnelRemoveRouteMethodDescriptor),
+		connect.WithSchema(raidoServiceMethods.ByName("TunnelRemoveRoute")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/service.RaidoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

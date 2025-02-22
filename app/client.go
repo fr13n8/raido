@@ -122,10 +122,11 @@ func (c *Client) AgentRemove(ctx context.Context, agentId string) error {
 	return nil
 }
 
-func (c *Client) ProxyStart(ctx context.Context, proxyAddr string) ([]byte, error) {
+func (c *Client) ProxyStart(ctx context.Context, proxyAddr, protocol string) ([]byte, error) {
 	pStartResp, err := c.serviceClient.ProxyStart(ctx, &connect.Request[pb.ProxyStartRequest]{
 		Msg: &pb.ProxyStartRequest{
-			ProxyAddress: proxyAddr,
+			ProxyAddress:      proxyAddr,
+			TransportProtocol: protocol,
 		},
 	})
 	if err != nil {

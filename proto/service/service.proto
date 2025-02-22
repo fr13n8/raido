@@ -26,6 +26,7 @@ message AgentRemoveRequest {
 
 message ProxyStartRequest {
   string proxy_address = 1;
+  string transport_protocol = 2; // e.g., "quic", "tcp"
 }
 
 message ProxyStartResponse {

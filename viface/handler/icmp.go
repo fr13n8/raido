@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/quic-go/quic-go"
+	"github.com/fr13n8/raido/proxy/transport"
 	"github.com/rs/zerolog/log"
 	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -16,7 +16,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func StartResponder(s *stack.Stack, conn quic.Connection) error {
+func StartResponder(s *stack.Stack, conn transport.StreamConn) error {
 	var wq waiter.Queue
 
 	ep, err := raw.NewEndpoint(s, ipv4.ProtocolNumber, icmp.ProtocolNumber4, &wq)
