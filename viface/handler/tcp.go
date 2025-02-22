@@ -12,11 +12,20 @@ import (
 	"github.com/rs/zerolog/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func TCP(ctx context.Context, conn transport.StreamConn, fr *tcp.ForwarderRequest) {
+type TCPHandler struct {
+	conn transport.StreamConn
+}
+
+func NewTCPHandler(conn transport.StreamConn) *TCPHandler {
+	return &TCPHandler{conn: conn}
+}
+
+func (h *TCPHandler) HandleRequest(ctx context.Context, fr *tcp.ForwarderRequest) {
 	// Create a waiter queue and TCP endpoint for the forwarded connection.
 	var wq waiter.Queue
 	ep, tcperr := fr.CreateEndpoint(&wq)
@@ -37,12 +46,22 @@ func TCP(ctx context.Context, conn transport.StreamConn, fr *tcp.ForwarderReques
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 
 	// Open a QUIC stream to communicate with the target.
-	stream, err := conn.OpenStream(ctx)
+	stream, err := h.conn.OpenStream(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not open QUIC stream with target")
 		return
 	}
 
+	if err := h.establishConnection(ctx, stream, s); err != nil {
+		log.Error().Err(err).Msg("Establish connection failed")
+		return
+	}
+
+	// Pipe data between the QUIC stream and the TCP connection.
+	relay.Pipe(stream, gonetConn)
+}
+
+func (h *TCPHandler) establishConnection(ctx context.Context, stream transport.Stream, s stack.TransportEndpointID) error {
 	// Determine if the connection is IPv4 or IPv6.
 	network := protocol.Networkv4
 	if s.LocalAddress.To4() == (tcpip.Address{}) {
@@ -67,7 +86,7 @@ func TCP(ctx context.Context, conn transport.StreamConn, fr *tcp.ForwarderReques
 	encodedIP, err := ipStruct.Encode()
 	if err != nil {
 		log.Error().Err(err).Msg("could not encode address")
-		return
+		return fmt.Errorf("could not encode address: %w", err)
 	}
 
 	// Send the connection establishment request via the QUIC stream.
@@ -77,7 +96,7 @@ func TCP(ctx context.Context, conn transport.StreamConn, fr *tcp.ForwarderReques
 		Body:    encodedIP,
 	}); err != nil {
 		log.Error().Err(err).Msg("could not send connection establishment data")
-		return
+		return fmt.Errorf("could not send connection establishment data: %w", err)
 	}
 
 	// Receive the response from the QUIC stream.
@@ -85,16 +104,15 @@ func TCP(ctx context.Context, conn transport.StreamConn, fr *tcp.ForwarderReques
 	dec, err := decoder.Decode()
 	if err != nil {
 		log.Error().Err(err).Msg("could not decode connection establishment response")
-		return
+		return fmt.Errorf("could not decode connection establishment response: %w", err)
 	}
 
 	// Check if the connection was established successfully.
 	if !dec.Established {
 		log.Error().Msgf("failed to establish TCP connection with target: %s",
 			net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
-		return
+		return fmt.Errorf("failed to establish TCP connection with target")
 	}
 
-	// Pipe data between the QUIC stream and the TCP connection.
-	relay.Pipe(stream, gonetConn)
+	return nil
 }

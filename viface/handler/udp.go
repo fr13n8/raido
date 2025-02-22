@@ -12,11 +12,20 @@ import (
 	"github.com/rs/zerolog/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func UDP(ctx context.Context, conn transport.StreamConn, fr *udp.ForwarderRequest) {
+type UDPHandler struct {
+	conn transport.StreamConn
+}
+
+func NewUDPHandler(conn transport.StreamConn) *UDPHandler {
+	return &UDPHandler{conn: conn}
+}
+
+func (h *UDPHandler) HandleRequest(ctx context.Context, fr *udp.ForwarderRequest) {
 	// Create endpoint as quickly as possible to avoid UDP
 	// race conditions, when user sends multiple frames
 	// one after another.
@@ -37,12 +46,22 @@ func UDP(ctx context.Context, conn transport.StreamConn, fr *udp.ForwarderReques
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 
 	// Open the QUIC stream asynchronously to avoid blocking
-	stream, err := conn.OpenStream(ctx)
+	stream, err := h.conn.OpenStream(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not open QUIC stream with target")
 		return
 	}
 
+	if err := h.establishConnection(ctx, stream, s); err != nil {
+		log.Error().Err(err).Msg("Establish connection failed")
+		return
+	}
+
+	// Pipe data between the QUIC stream and the UDP connection.
+	relay.Pipe(stream, gonetConn)
+}
+
+func (h *UDPHandler) establishConnection(ctx context.Context, stream transport.Stream, s stack.TransportEndpointID) error {
 	// Handle protocol versioning and IP conversion
 	network := protocol.Networkv4
 	if s.LocalAddress.To4() == (tcpip.Address{}) {
@@ -67,7 +86,7 @@ func UDP(ctx context.Context, conn transport.StreamConn, fr *udp.ForwarderReques
 	encodedIP, err := ipStruct.Encode()
 	if err != nil {
 		log.Error().Err(err).Msg("could not encode IP address")
-		return
+		return fmt.Errorf("could not encode IP address: %w", err)
 	}
 
 	encoder := protocol.NewEncoder[protocol.Data](stream)
@@ -79,23 +98,23 @@ func UDP(ctx context.Context, conn transport.StreamConn, fr *udp.ForwarderReques
 		Body:    encodedIP,
 	}); err != nil {
 		log.Error().Err(err).Msg("could not send establish connection command")
-		return
+		return fmt.Errorf("could not send establish connection command: %w", err)
 	}
 
 	// Await the response from the target
 	dec, err := decoder.Decode()
 	if err != nil {
 		log.Error().Err(err).Msg("could not decode response from target")
-		return
+		return fmt.Errorf("could not decode response from target: %w", err)
 	}
 
 	// Check if the connection was established successfully
 	if !dec.Established {
 		log.Error().Msgf("could not establish connection with target UDP:%s",
 			net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
-		return
+		return fmt.Errorf("could not establish connection with target UDP:%s",
+			net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 	}
 
-	// Pipe data between the QUIC stream and the UDP connection.
-	relay.Pipe(stream, gonetConn)
+	return nil
 }

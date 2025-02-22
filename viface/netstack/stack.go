@@ -13,8 +13,13 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
+type NetStack struct {
+	Stack *stack.Stack
+	// device stack.LinkEndpoint
+}
+
 // NewNetStack creates and configures a new network stack.
-func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn transport.StreamConn) (*stack.Stack, error) {
+func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn transport.StreamConn) (*NetStack, error) {
 	// Initialize the network stack with the necessary protocols.
 	s := stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocolFactory{
@@ -57,5 +62,11 @@ func NewNetStack(ctx context.Context, device stack.LinkEndpoint, conn transport.
 		}
 	}
 
-	return s, nil
+	return &NetStack{
+		Stack: s,
+	}, nil
+}
+
+func (ns *NetStack) Close() {
+	ns.Stack.Close()
 }

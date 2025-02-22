@@ -8,11 +8,10 @@ import (
 	"github.com/fr13n8/raido/viface/netstack"
 	"github.com/fr13n8/raido/viface/sysnetops"
 	"github.com/fr13n8/raido/viface/tun"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 type Tunnel struct {
-	stack        *stack.Stack
+	stack        *netstack.NetStack
 	device       tun.TUNDevice
 	link         *sysnetops.LinkTun
 	activeRoutes []string

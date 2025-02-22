@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"errors"
 
 	"github.com/fr13n8/raido/proxy/transport"
@@ -16,10 +17,19 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func StartResponder(s *stack.Stack, conn transport.StreamConn) error {
+type ICMPHandler struct {
+	stack *stack.Stack
+	conn  transport.StreamConn
+}
+
+func NewICMPHandler(s *stack.Stack, conn transport.StreamConn) *ICMPHandler {
+	return &ICMPHandler{stack: s, conn: conn}
+}
+
+func (h *ICMPHandler) Start(ctx context.Context) error {
 	var wq waiter.Queue
 
-	ep, err := raw.NewEndpoint(s, ipv4.ProtocolNumber, icmp.ProtocolNumber4, &wq)
+	ep, err := raw.NewEndpoint(h.stack, ipv4.ProtocolNumber, icmp.ProtocolNumber4, &wq)
 	if err != nil {
 		log.Error().Msgf("Could not create raw endpoint: %s", err.String())
 		return errors.New(err.String())
@@ -38,58 +48,57 @@ func StartResponder(s *stack.Stack, conn transport.StreamConn) error {
 	waitEntry, ch := waiter.NewChannelEntry(waiter.ReadableEvents)
 	wq.EventRegister(&waitEntry)
 
-	go func() {
-		for {
+	go h.processICMPPackets(ctx, ep, ch)
+
+	return nil
+}
+
+func (h *ICMPHandler) processICMPPackets(ctx context.Context, ep tcpip.Endpoint, ch chan struct{}) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ch:
 			var buf bytes.Buffer
 			_, err := ep.Read(&buf, tcpip.ReadOptions{})
 			if err != nil {
 				if _, ok := err.(*tcpip.ErrWouldBlock); !ok {
-					log.Error().Msgf("icmp responder error: %v", err)
+					log.Error().Err(errors.New(err.String())).Msg("ICMP read error")
 				}
 				continue
 			}
 
 			neth := header.IPv4(buf.Bytes())
-
-			view := buffer.MakeWithData(buf.Bytes())
-			packetbuff := stack.NewPacketBuffer(stack.PacketBufferOptions{
-				Payload:            view,
-				ReserveHeaderBytes: int(neth.HeaderLength()),
-				IsForwardedPacket:  true,
-			})
-
-			packetbuff.NetworkProtocolNumber = ipv4.ProtocolNumber
-			packetbuff.TransportProtocolNumber = icmp.ProtocolNumber4
-			packetbuff.NetworkHeader().Consume(int(neth.HeaderLength()))
-
-			v, ok := packetbuff.Data().PullUp(header.ICMPv4MinimumSize)
-			if !ok {
-				continue
-			}
-			h := header.ICMPv4(v)
-			log.Info().Msgf("received icmp[type=%d code=%d] flow from %s to %s", h.Type(), h.Code(), neth.SourceAddress().String(), neth.DestinationAddress())
-
-			// if h.Type() == header.ICMPv4Echo {
-			// 	iph := header.IPv4(packetbuff.NetworkHeader().Slice())
-			// 	// Parse network header for destination address.
-			// 	dest := iph.DestinationAddress().String()
-
-			// 	// log.Debug().Any("payload", string(neth.Payload())).Send()
-			// 	log.Debug().Str("dest", dest).Send()
-
-			// 	// requestPing := goicmp.Echo{
-			// 	// 	Seq:  rand.Intn(1 << 16),
-			// 	// 	Data: []byte("gopher burrow"),
-			// 	// }
-			// 	// icmpBytes, _ := (&goicmp.Message{Type: goipv4.ICMPTypeEcho, Code: 0, Body: &requestPing}).Marshal(nil)
-			// 	// _ = icmpBytes
-			// 	// log.Info().Msg(string(icmpBytes))
-			// }
-
-			<-ch
+			h.handleICMPPacket(neth, buf)
 		}
+	}
+}
 
-	}()
+func (h *ICMPHandler) handleICMPPacket(neth header.IPv4, buf bytes.Buffer) {
+	view := buffer.MakeWithData(buf.Bytes())
+	packetbuff := stack.NewPacketBuffer(stack.PacketBufferOptions{
+		Payload:            view,
+		ReserveHeaderBytes: int(neth.HeaderLength()),
+		IsForwardedPacket:  true,
+	})
 
-	return nil
+	packetbuff.NetworkProtocolNumber = ipv4.ProtocolNumber
+	packetbuff.TransportProtocolNumber = icmp.ProtocolNumber4
+	packetbuff.NetworkHeader().Consume(int(neth.HeaderLength()))
+
+	v, ok := packetbuff.Data().PullUp(header.ICMPv4MinimumSize)
+	if !ok {
+		log.Error().Msg("Failed to pull up ICMP header")
+		return
+	}
+	hr := header.ICMPv4(v)
+
+	log.Info().
+		Str("source", neth.SourceAddress().String()).
+		Str("destination", neth.DestinationAddress().String()).
+		Bytes("type", []byte{byte(hr.Type())}).
+		Bytes("code", []byte{byte(hr.Code())}).
+		Msg("Received ICMP packet")
+
+	// Add ICMP response handling logic here
 }
