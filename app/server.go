@@ -9,13 +9,13 @@ import (
 
 	pb "github.com/fr13n8/raido/proto/service"
 	"github.com/fr13n8/raido/proto/service/serviceconnect"
+	"github.com/fr13n8/raido/proxy"
 
 	"connectrpc.com/connect"
 	"github.com/fr13n8/raido/agent"
 	"github.com/fr13n8/raido/config"
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/transport"
-	"github.com/fr13n8/raido/proxy/transport/core"
 	"github.com/fr13n8/raido/proxy/transport/quic"
 	"github.com/fr13n8/raido/proxy/transport/tcp"
 	"github.com/fr13n8/raido/utils/certs"
@@ -29,7 +29,7 @@ var _ serviceconnect.RaidoServiceHandler = (*ServiceHandler)(nil)
 
 type ServiceHandler struct {
 	agentManager        *agent.Manager
-	proxyServerInstance *core.Server
+	proxyServerInstance *proxy.Server
 	ctx                 context.Context
 	proxyCancell        context.CancelFunc
 	serviceconnect.UnimplementedRaidoServiceHandler
@@ -64,7 +64,7 @@ func (s *ServiceHandler) ProxyStart(ctx context.Context, req *connect.Request[pb
 		return nil, fmt.Errorf("unsupported transport protocol: %s", transportProtocol)
 	}
 
-	s.proxyServerInstance, err = core.NewServer(ctx, transportImpl, proxyAddr)
+	s.proxyServerInstance, err = proxy.NewServer(ctx, transportImpl, proxyAddr)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create proxy server")
 		return nil, fmt.Errorf("failed to create proxy server")

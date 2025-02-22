@@ -13,14 +13,12 @@ import (
 	"connectrpc.com/connect"
 	"github.com/fr13n8/raido/config"
 	"github.com/peterbourgon/unixtransport"
-	"github.com/quic-go/quic-go/http3"
 )
 
 type ClientKey struct{}
 
 type Client struct {
 	serviceClient serviceconnect.RaidoServiceClient
-	qConn         *http3.RoundTripper
 }
 
 func NewClient(ctx context.Context, cfg *config.ServiceDialer) *Client {

@@ -14,9 +14,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/fr13n8/raido/proxy"
 	"github.com/fr13n8/raido/proxy/protocol"
 	"github.com/fr13n8/raido/proxy/transport"
-	"github.com/fr13n8/raido/proxy/transport/core"
 	"github.com/fr13n8/raido/proxy/transport/quic"
 	"github.com/fr13n8/raido/proxy/transport/tcp"
 
@@ -99,7 +99,7 @@ Flags:`)
 		log.Fatal().Msgf("unsupported transport protocol: %s", *transportProtocol)
 	}
 
-	d := core.NewDialer(ctx, transportImpl, *proxyAddress)
+	d := proxy.NewDialer(ctx, transportImpl, *proxyAddress)
 
 	// go func() {
 	// 	http.Handle("/prometheus", promhttp.Handler())
