@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/fr13n8/raido/proto/service"
+	"github.com/fr13n8/raido/proto/service"
 	"github.com/fr13n8/raido/proto/service/serviceconnect"
 
 	"connectrpc.com/connect"
@@ -45,8 +45,8 @@ func NewClient(ctx context.Context, cfg *config.ServiceDialer) *Client {
 }
 
 func (c *Client) TunnelAddRoute(ctx context.Context, agentId string, routes []string) error {
-	_, err := c.serviceClient.TunnelAddRoute(ctx, &connect.Request[pb.TunnelAddRouteRequest]{
-		Msg: &pb.TunnelAddRouteRequest{
+	_, err := c.serviceClient.TunnelAddRoute(ctx, &connect.Request[service.TunnelAddRouteRequest]{
+		Msg: &service.TunnelAddRouteRequest{
 			AgentId: agentId,
 			Routes:  routes,
 		},
@@ -59,8 +59,8 @@ func (c *Client) TunnelAddRoute(ctx context.Context, agentId string, routes []st
 }
 
 func (c *Client) TunnelRemoveRoute(ctx context.Context, agentId string, routes []string) error {
-	_, err := c.serviceClient.TunnelRemoveRoute(ctx, &connect.Request[pb.TunnelRemoveRouteRequest]{
-		Msg: &pb.TunnelRemoveRouteRequest{
+	_, err := c.serviceClient.TunnelRemoveRoute(ctx, &connect.Request[service.TunnelRemoveRouteRequest]{
+		Msg: &service.TunnelRemoveRouteRequest{
 			AgentId: agentId,
 			Routes:  routes,
 		},
@@ -73,8 +73,8 @@ func (c *Client) TunnelRemoveRoute(ctx context.Context, agentId string, routes [
 }
 
 func (c *Client) TunnelPause(ctx context.Context, agentId string) error {
-	_, err := c.serviceClient.TunnelPause(ctx, &connect.Request[pb.TunnelPauseRequest]{
-		Msg: &pb.TunnelPauseRequest{
+	_, err := c.serviceClient.TunnelPause(ctx, &connect.Request[service.TunnelPauseRequest]{
+		Msg: &service.TunnelPauseRequest{
 			AgentId: agentId,
 		},
 	})
@@ -86,8 +86,8 @@ func (c *Client) TunnelPause(ctx context.Context, agentId string) error {
 }
 
 func (c *Client) TunnelResume(ctx context.Context, agentId string) error {
-	_, err := c.serviceClient.TunnelResume(ctx, &connect.Request[pb.TunnelResumeRequest]{
-		Msg: &pb.TunnelResumeRequest{
+	_, err := c.serviceClient.TunnelResume(ctx, &connect.Request[service.TunnelResumeRequest]{
+		Msg: &service.TunnelResumeRequest{
 			AgentId: agentId,
 		},
 	})
@@ -98,8 +98,8 @@ func (c *Client) TunnelResume(ctx context.Context, agentId string) error {
 	return nil
 }
 
-func (c *Client) TunnelList(ctx context.Context) ([]*pb.Tunnel, error) {
-	resp, err := c.serviceClient.TunnelList(ctx, &connect.Request[pb.Empty]{})
+func (c *Client) TunnelList(ctx context.Context) ([]*service.Tunnel, error) {
+	resp, err := c.serviceClient.TunnelList(ctx, &connect.Request[service.Empty]{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to request tunnels: %w", err)
 	}
@@ -108,8 +108,8 @@ func (c *Client) TunnelList(ctx context.Context) ([]*pb.Tunnel, error) {
 }
 
 func (c *Client) AgentRemove(ctx context.Context, agentId string) error {
-	_, err := c.serviceClient.AgentRemove(ctx, &connect.Request[pb.AgentRemoveRequest]{
-		Msg: &pb.AgentRemoveRequest{
+	_, err := c.serviceClient.AgentRemove(ctx, &connect.Request[service.AgentRemoveRequest]{
+		Msg: &service.AgentRemoveRequest{
 			AgentId: agentId,
 		},
 	})
@@ -121,8 +121,8 @@ func (c *Client) AgentRemove(ctx context.Context, agentId string) error {
 }
 
 func (c *Client) ProxyStart(ctx context.Context, proxyAddr, protocol string) ([]byte, error) {
-	pStartResp, err := c.serviceClient.ProxyStart(ctx, &connect.Request[pb.ProxyStartRequest]{
-		Msg: &pb.ProxyStartRequest{
+	pStartResp, err := c.serviceClient.ProxyStart(ctx, &connect.Request[service.ProxyStartRequest]{
+		Msg: &service.ProxyStartRequest{
 			ProxyAddress:      proxyAddr,
 			TransportProtocol: protocol,
 		},
@@ -135,7 +135,7 @@ func (c *Client) ProxyStart(ctx context.Context, proxyAddr, protocol string) ([]
 }
 
 func (c *Client) ProxyStop(ctx context.Context) error {
-	_, err := c.serviceClient.ProxyStop(ctx, &connect.Request[pb.Empty]{})
+	_, err := c.serviceClient.ProxyStop(ctx, &connect.Request[service.Empty]{})
 	if err != nil {
 		return fmt.Errorf("failed to request proxy stop: %w", err)
 	}
@@ -143,8 +143,8 @@ func (c *Client) ProxyStop(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) AgentList(ctx context.Context) (map[string]*pb.Agent, error) {
-	resp, err := c.serviceClient.AgentList(ctx, &connect.Request[pb.Empty]{})
+func (c *Client) AgentList(ctx context.Context) (map[string]*service.Agent, error) {
+	resp, err := c.serviceClient.AgentList(ctx, &connect.Request[service.Empty]{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to request agents: %w", err)
 	}
@@ -153,8 +153,8 @@ func (c *Client) AgentList(ctx context.Context) (map[string]*pb.Agent, error) {
 }
 
 func (c *Client) TunnelStart(ctx context.Context, agentId string, routes []string) error {
-	_, err := c.serviceClient.TunnelStart(ctx, &connect.Request[pb.TunnelStartRequest]{
-		Msg: &pb.TunnelStartRequest{
+	_, err := c.serviceClient.TunnelStart(ctx, &connect.Request[service.TunnelStartRequest]{
+		Msg: &service.TunnelStartRequest{
 			AgentId: agentId,
 			Routes:  routes,
 		},
@@ -167,8 +167,8 @@ func (c *Client) TunnelStart(ctx context.Context, agentId string, routes []strin
 }
 
 func (c *Client) TunnelStop(ctx context.Context, agentId string) error {
-	_, err := c.serviceClient.TunnelStop(ctx, &connect.Request[pb.TunnelStopRequest]{
-		Msg: &pb.TunnelStopRequest{
+	_, err := c.serviceClient.TunnelStop(ctx, &connect.Request[service.TunnelStopRequest]{
+		Msg: &service.TunnelStopRequest{
 			AgentId: agentId,
 		},
 	})

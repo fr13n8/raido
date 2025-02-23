@@ -117,7 +117,7 @@ func copyData(dst io.Writer, src io.Reader, dir string) (written int64, err erro
 const defaultBufferSize = 64 * 1024
 
 var bufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return make([]byte, defaultBufferSize)
 	},
 }
@@ -131,6 +131,6 @@ func Copy(dst io.Writer, src io.Reader) (written int64, err error) {
 	}
 
 	buffer := bufferPool.Get().([]byte)
-	defer bufferPool.Put(buffer)
+	defer bufferPool.Put(&buffer)
 	return io.CopyBuffer(dst, src, buffer)
 }
