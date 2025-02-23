@@ -65,7 +65,7 @@ func (h *TCPHandler) HandleRequest(ctx context.Context, fr *tcp.ForwarderRequest
 	}
 }
 
-func (h *TCPHandler) establishConnection(ctx context.Context, stream transport.Stream, s stack.TransportEndpointID) error {
+func (h *TCPHandler) establishConnection(_ context.Context, stream transport.Stream, s stack.TransportEndpointID) error {
 	// Determine if the connection is IPv4 or IPv6.
 	network := protocol.Networkv4
 	if s.LocalAddress.To4() == (tcpip.Address{}) {

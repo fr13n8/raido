@@ -65,7 +65,7 @@ func (h *UDPHandler) HandleRequest(ctx context.Context, fr *udp.ForwarderRequest
 	}
 }
 
-func (h *UDPHandler) establishConnection(ctx context.Context, stream transport.Stream, s stack.TransportEndpointID) error {
+func (h *UDPHandler) establishConnection(_ context.Context, stream transport.Stream, s stack.TransportEndpointID) error {
 	// Handle protocol versioning and IP conversion
 	network := protocol.Networkv4
 	if s.LocalAddress.To4() == (tcpip.Address{}) {
