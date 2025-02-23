@@ -18,6 +18,10 @@ type StreamConn interface {
 	AcceptStream(ctx context.Context) (Stream, error)
 	Close() error
 	CloseWithError(code uint64, reason string) error
+
+	// GetStream and PutStream are used to manage streams in a pool.
+	GetStream(ctx context.Context) (Stream, error)
+	PutStream(stream Stream)
 }
 
 // StreamListener represents a listener that accepts StreamConn instances.

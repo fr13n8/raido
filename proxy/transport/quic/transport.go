@@ -25,7 +25,10 @@ func (t *QUICTransport) Dial(ctx context.Context, addr string) (transport.Stream
 	if err != nil {
 		return nil, err
 	}
-	return &QUICStreamConn{conn: conn}, nil
+
+	streamConn := &QUICStreamConn{conn: conn}
+	streamConn.streamPool = transport.NewStreamPool(16, streamConn)
+	return streamConn, nil
 }
 
 func (t *QUICTransport) Listen(ctx context.Context, addr string) (transport.StreamListener, error) {
@@ -38,7 +41,8 @@ func (t *QUICTransport) Listen(ctx context.Context, addr string) (transport.Stre
 
 // QUICStreamConn wraps a quic.Connection as a StreamConn.
 type QUICStreamConn struct {
-	conn quic.Connection
+	conn       quic.Connection
+	streamPool *transport.StreamPool
 }
 
 func (c *QUICStreamConn) OpenStream(ctx context.Context) (transport.Stream, error) {
@@ -57,6 +61,14 @@ func (c *QUICStreamConn) CloseWithError(code uint64, reason string) error {
 	return c.conn.CloseWithError(quic.ApplicationErrorCode(code), reason)
 }
 
+func (c *QUICStreamConn) GetStream(ctx context.Context) (transport.Stream, error) {
+	return c.streamPool.Get(ctx)
+}
+
+func (c *QUICStreamConn) PutStream(stream transport.Stream) {
+	c.streamPool.Put(stream)
+}
+
 // QUICStreamListener wraps a quic.Listener as a StreamListener.
 type QUICStreamListener struct {
 	listener *quic.Listener
@@ -67,7 +79,10 @@ func (l *QUICStreamListener) Accept(ctx context.Context) (transport.StreamConn, 
 	if err != nil {
 		return nil, err
 	}
-	return &QUICStreamConn{conn: conn}, nil
+
+	streamConn := &QUICStreamConn{conn: conn}
+	streamConn.streamPool = transport.NewStreamPool(16, streamConn)
+	return streamConn, nil
 }
 
 func (l *QUICStreamListener) Close() error {

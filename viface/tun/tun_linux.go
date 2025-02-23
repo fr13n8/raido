@@ -39,11 +39,11 @@ func Open(name string) (TUNDevice, error) {
 
 	// Create a new LinkEndpoint using the fdbased package, setting options for performance.
 	lep, err := fdbased.New(&fdbased.Options{
-		FDs:            []int{fd}, // File descriptor for the TUN interface.
-		MTU:            _mtu,      // MTU of the device.
-		EthernetHeader: false,     // TUN devices don't use Ethernet headers.
-		// PacketDispatchMode: fdbased.RecvMMsg, // Use MMsg for high throughput packet processing.
-		// GSOMaxSize:         65536,            // Enable GSO to batch packets for higher throughput.
+		FDs:                []int{fd},        // File descriptor for the TUN interface.
+		MTU:                _mtu,             // MTU of the device.
+		EthernetHeader:     false,            // TUN devices don't use Ethernet headers.
+		PacketDispatchMode: fdbased.RecvMMsg, // Use MMsg for high throughput packet processing.
+		GSOMaxSize:         65536,            // Enable GSO to batch packets for higher throughput.
 	})
 	if err != nil {
 		// Ensure the fd is closed on error.

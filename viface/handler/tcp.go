@@ -45,20 +45,24 @@ func (h *TCPHandler) HandleRequest(ctx context.Context, fr *tcp.ForwarderRequest
 		net.JoinHostPort(s.RemoteAddress.String(), fmt.Sprint(s.RemotePort)),
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 
-	// Open a QUIC stream to communicate with the target.
-	stream, err := h.conn.OpenStream(ctx)
+	// Open a stream to communicate with the target.
+	stream, err := h.conn.GetStream(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("could not open QUIC stream with target")
+		log.Error().Err(err).Msg("could not open stream with target")
 		return
 	}
+	defer h.conn.PutStream(stream)
 
 	if err := h.establishConnection(ctx, stream, s); err != nil {
 		log.Error().Err(err).Msg("Establish connection failed")
 		return
 	}
 
-	// Pipe data between the QUIC stream and the TCP connection.
-	relay.Pipe(stream, gonetConn)
+	// Pipe data between the stream and the TCP connection.
+	if err := relay.Pipe(stream, gonetConn); err != nil {
+		log.Error().Err(err).Msg("could not pipe data between stream and TCP connection")
+		return
+	}
 }
 
 func (h *TCPHandler) establishConnection(ctx context.Context, stream transport.Stream, s stack.TransportEndpointID) error {

@@ -45,20 +45,24 @@ func (h *UDPHandler) HandleRequest(ctx context.Context, fr *udp.ForwarderRequest
 		net.JoinHostPort(s.RemoteAddress.String(), fmt.Sprint(s.RemotePort)),
 		net.JoinHostPort(s.LocalAddress.String(), fmt.Sprint(s.LocalPort)))
 
-	// Open the QUIC stream asynchronously to avoid blocking
-	stream, err := h.conn.OpenStream(ctx)
+	// Open the stream asynchronously to avoid blocking
+	stream, err := h.conn.GetStream(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("could not open QUIC stream with target")
+		log.Error().Err(err).Msg("could not open stream with target")
 		return
 	}
+	defer h.conn.PutStream(stream)
 
 	if err := h.establishConnection(ctx, stream, s); err != nil {
 		log.Error().Err(err).Msg("Establish connection failed")
 		return
 	}
 
-	// Pipe data between the QUIC stream and the UDP connection.
-	relay.Pipe(stream, gonetConn)
+	// Pipe data between the stream and the UDP connection.
+	if err := relay.Pipe(stream, gonetConn); err != nil {
+		log.Error().Err(err).Msg("could not pipe data between stream and UDP connection")
+		return
+	}
 }
 
 func (h *UDPHandler) establishConnection(ctx context.Context, stream transport.Stream, s stack.TransportEndpointID) error {

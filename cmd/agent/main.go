@@ -97,6 +97,7 @@ Flags:`)
 		transportImpl = tcp.NewTCPTransport(tlsConfig)
 	default:
 		log.Fatal().Msgf("unsupported transport protocol: %s", *transportProtocol)
+		return
 	}
 
 	d := proxy.NewDialer(ctx, transportImpl, *proxyAddress)

@@ -9,8 +9,8 @@ import (
 var (
 	qConfig = &quic.Config{
 		HandshakeIdleTimeout:       5 * time.Second,
-		MaxIdleTimeout:             5 * time.Second,
-		KeepAlivePeriod:            1 * time.Second,
+		MaxIdleTimeout:             30 * time.Second,
+		KeepAlivePeriod:            5 * time.Second,
 		MaxIncomingStreams:         1 << 60,
 		MaxIncomingUniStreams:      -1,
 		DisablePathMTUDiscovery:    false,

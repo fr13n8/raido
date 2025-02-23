@@ -21,20 +21,16 @@ import (
 )
 
 type Dialer struct {
-	address    string
-	streamCh   chan transport.Stream
-	tr         transport.Transport
-	workerPool *WorkerPool
+	address  string
+	streamCh chan transport.Stream
+	tr       transport.Transport
 }
 
 func NewDialer(ctx context.Context, tr transport.Transport, address string) *Dialer {
-	wp := NewWorkerPool(2, 100, 30*time.Second)
-	wp.Start()
-
 	return &Dialer{
 		streamCh: make(chan transport.Stream, runtime.NumCPU()),
 		tr:       tr,
-		address:  address, workerPool: wp,
+		address:  address,
 	}
 }
 
@@ -91,8 +87,6 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 }
 
 func (d *Dialer) Run(ctx context.Context) error {
-	defer d.workerPool.Stop()
-
 	return wait.ExponentialBackoffWithContext(ctx, DefaultBackoff, func(context.Context) (done bool, err error) {
 		if err := d.dialAndServer(ctx); err != nil {
 			log.Error().Err(err).Msg("could not dial and serve")
@@ -109,9 +103,7 @@ func (d *Dialer) Run(ctx context.Context) error {
 
 func (d *Dialer) processConnection(ctx context.Context) {
 	for stream := range d.streamCh {
-		d.workerPool.Submit(func() {
-			d.handleStream(ctx, stream)
-		})
+		go d.handleStream(ctx, stream)
 	}
 }
 

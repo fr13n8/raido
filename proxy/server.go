@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/fr13n8/raido/agent"
 	"github.com/fr13n8/raido/config"
@@ -20,7 +19,6 @@ type Server struct {
 	listener     transport.StreamListener
 	agentManager *agent.Manager
 	connCh       chan transport.StreamConn
-	workerPool   *WorkerPool
 }
 
 func NewServer(ctx context.Context, tr transport.Transport, address string) (*Server, error) {
@@ -29,14 +27,10 @@ func NewServer(ctx context.Context, tr transport.Transport, address string) (*Se
 		return nil, fmt.Errorf("could not listen on address: %w", err)
 	}
 
-	wp := NewWorkerPool(2, 100, 30*time.Second)
-	wp.Start()
-
 	return &Server{
 		listener:     listener,
 		agentManager: agent.NewAgentManager(),
 		connCh:       make(chan transport.StreamConn),
-		workerPool:   wp,
 	}, nil
 }
 
@@ -57,7 +51,6 @@ func (s *Server) ShutdownGracefully(ctx context.Context) error {
 		return fmt.Errorf("shutdown errors: %v", errs)
 	}
 
-	s.workerPool.Stop()
 	return nil
 }
 
@@ -110,19 +103,17 @@ func (s *Server) Listen(ctx context.Context) error {
 
 func (s *Server) processConnection(ctx context.Context) {
 	for conn := range s.connCh {
-		s.workerPool.Submit(func() {
-			s.startHandshake(ctx, conn)
-		})
+		go s.startHandshake(ctx, conn)
 	}
 }
 
 func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) {
-	stream, err := conn.OpenStream(ctx)
+	stream, err := conn.GetStream(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to open stream")
 		return
 	}
-	defer stream.Close()
+	defer conn.PutStream(stream)
 
 	encoder := protocol.NewEncoder[protocol.Data](stream)
 	decoder := protocol.NewDecoder[protocol.GetRoutesResp](stream)

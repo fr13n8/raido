@@ -37,7 +37,10 @@ func (t *TCPTransport) Dial(ctx context.Context, addr string) (transport.StreamC
 		conn.Close()
 		return nil, fmt.Errorf("could not establish yamux session: %w", err)
 	}
-	return &TCPStreamConn{session: session}, nil
+
+	streamConn := &TCPStreamConn{session: session}
+	streamConn.streamPool = transport.NewStreamPool(16, streamConn)
+	return streamConn, nil
 }
 
 // Listen sets up a TCP listener and wraps accepted connections with yamux.
@@ -57,7 +60,8 @@ func (t *TCPTransport) Listen(ctx context.Context, addr string) (transport.Strea
 
 // TCPStreamConn wraps a yamux session as a StreamConn.
 type TCPStreamConn struct {
-	session *yamux.Session
+	session    *yamux.Session
+	streamPool *transport.StreamPool
 }
 
 func (c *TCPStreamConn) OpenStream(ctx context.Context) (transport.Stream, error) {
@@ -76,6 +80,14 @@ func (c *TCPStreamConn) CloseWithError(code uint64, reason string) error {
 	return c.session.Close()
 }
 
+func (c *TCPStreamConn) GetStream(ctx context.Context) (transport.Stream, error) {
+	return c.streamPool.Get(ctx)
+}
+
+func (c *TCPStreamConn) PutStream(stream transport.Stream) {
+	c.streamPool.Put(stream)
+}
+
 // TCPStreamListener wraps a net.Listener to produce yamux sessions.
 type TCPStreamListener struct {
 	listener net.Listener
@@ -91,7 +103,10 @@ func (l *TCPStreamListener) Accept(ctx context.Context) (transport.StreamConn, e
 		conn.Close()
 		return nil, err
 	}
-	return &TCPStreamConn{session: session}, nil
+
+	streamConn := &TCPStreamConn{session: session}
+	streamConn.streamPool = transport.NewStreamPool(16, streamConn)
+	return streamConn, nil
 }
 
 func (l *TCPStreamListener) Close() error {

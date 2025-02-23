@@ -24,8 +24,8 @@ type WriterCloser interface {
 	io.WriteCloser
 }
 
-func Pipe(tunnelConn, originConn io.ReadWriteCloser) {
-	PipeBidirectional(tunnelConn, originConn)
+func Pipe(tunnelConn, originConn io.ReadWriteCloser) error {
+	return PipeBidirectional(tunnelConn, originConn)
 }
 
 func PipeBidirectional(downstream, upstream Stream) error {
@@ -45,10 +45,15 @@ func PipeBidirectional(downstream, upstream Stream) error {
 
 	wg.Wait()
 
+	var errs []error
 	for range 2 {
 		if err := <-errChan; err != nil {
-			return err
+			errs = append(errs, err)
 		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("errors during bidirectional copy: %v", errors.Join(errs...))
 	}
 
 	return nil
