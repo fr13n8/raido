@@ -21,16 +21,20 @@ import (
 )
 
 type Dialer struct {
-	address  string
-	streamCh chan transport.Stream
-	tr       transport.Transport
+	address    string
+	streamCh   chan transport.Stream
+	tr         transport.Transport
+	workerPool *WorkerPool
 }
 
 func NewDialer(ctx context.Context, tr transport.Transport, address string) *Dialer {
+	wp := NewWorkerPool(2, 100, 30*time.Second)
+	wp.Start()
+
 	return &Dialer{
-		streamCh: make(chan transport.Stream, runtime.NumCPU()), // Buffered channel to avoid blocking
+		streamCh: make(chan transport.Stream, runtime.NumCPU()),
 		tr:       tr,
-		address:  address,
+		address:  address, workerPool: wp,
 	}
 }
 
@@ -44,8 +48,6 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 	log.Info().Msgf("starting dialing to %s", d.address)
 	var g errgroup.Group
 
-	// ctx, stop := context.WithCancel(ctx)
-	// Handle context cancellation and connection closing
 	g.Go(func() error {
 		<-ctx.Done()
 		close(d.streamCh)
@@ -53,7 +55,6 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 		return conn.CloseWithError(protocol.ApplicationOK, "client closing down")
 	})
 
-	// Process streams
 	g.Go(func() error {
 		for {
 			select {
@@ -79,7 +80,6 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 		}
 	})
 
-	// Start worker pool to process streams
 	g.Go(func() error {
 		d.processConnection(ctx)
 
@@ -91,6 +91,8 @@ func (d *Dialer) dialAndServer(ctx context.Context) error {
 }
 
 func (d *Dialer) Run(ctx context.Context) error {
+	defer d.workerPool.Stop()
+
 	return wait.ExponentialBackoffWithContext(ctx, DefaultBackoff, func(context.Context) (done bool, err error) {
 		if err := d.dialAndServer(ctx); err != nil {
 			log.Error().Err(err).Msg("could not dial and serve")
@@ -106,15 +108,10 @@ func (d *Dialer) Run(ctx context.Context) error {
 }
 
 func (d *Dialer) processConnection(ctx context.Context) {
-	workerCount := runtime.NumCPU()
-	sem := make(chan struct{}, workerCount)
-
 	for stream := range d.streamCh {
-		sem <- struct{}{} // Acquire a worker slot
-		go func(s transport.Stream) {
-			defer func() { <-sem }() // Release worker slot when done
-			d.handleStream(ctx, s)   // Process the stream
-		}(stream)
+		d.workerPool.Submit(func() {
+			d.handleStream(ctx, stream)
+		})
 	}
 }
 

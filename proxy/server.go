@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"runtime"
+	"time"
 
 	"github.com/fr13n8/raido/agent"
 	"github.com/fr13n8/raido/config"
@@ -20,7 +20,7 @@ type Server struct {
 	listener     transport.StreamListener
 	agentManager *agent.Manager
 	connCh       chan transport.StreamConn
-	workerLimit  int
+	workerPool   *WorkerPool
 }
 
 func NewServer(ctx context.Context, tr transport.Transport, address string) (*Server, error) {
@@ -29,11 +29,14 @@ func NewServer(ctx context.Context, tr transport.Transport, address string) (*Se
 		return nil, fmt.Errorf("could not listen on address: %w", err)
 	}
 
+	wp := NewWorkerPool(2, 100, 30*time.Second)
+	wp.Start()
+
 	return &Server{
 		listener:     listener,
 		agentManager: agent.NewAgentManager(),
 		connCh:       make(chan transport.StreamConn),
-		workerLimit:  runtime.NumCPU(), // Limit for concurrent goroutines
+		workerPool:   wp,
 	}, nil
 }
 
@@ -53,6 +56,8 @@ func (s *Server) ShutdownGracefully(ctx context.Context) error {
 	if len(errs) > 0 {
 		return fmt.Errorf("shutdown errors: %v", errs)
 	}
+
+	s.workerPool.Stop()
 	return nil
 }
 
@@ -61,13 +66,11 @@ func (s *Server) Listen(ctx context.Context) error {
 
 	var g errgroup.Group
 
-	// Connection processing goroutine
 	g.Go(func() error {
 		s.processConnection(ctx)
 		return nil
 	})
 
-	// Connection accepting goroutine
 	g.Go(func() error {
 		defer s.listener.Close()
 
@@ -90,7 +93,6 @@ func (s *Server) Listen(ctx context.Context) error {
 		}
 	})
 
-	// Shutdown listener when context is done
 	g.Go(func() error {
 		<-ctx.Done()
 		shutdownCtx, stop := context.WithTimeout(context.Background(), config.ShutdownTimeout) // Set a timeout for graceful shutdown
@@ -107,14 +109,10 @@ func (s *Server) Listen(ctx context.Context) error {
 }
 
 func (s *Server) processConnection(ctx context.Context) {
-	sem := make(chan struct{}, s.workerLimit) // Semaphore to limit goroutines
-
 	for conn := range s.connCh {
-		sem <- struct{}{} // Acquire a semaphore spot
-		go func(conn transport.StreamConn) {
-			defer func() { <-sem }() // Release semaphore spot
+		s.workerPool.Submit(func() {
 			s.startHandshake(ctx, conn)
-		}(conn)
+		})
 	}
 }
 
@@ -124,12 +122,11 @@ func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) 
 		log.Error().Err(err).Msg("failed to open stream")
 		return
 	}
-	defer stream.Close() // Ensure stream is closed
+	defer stream.Close()
 
 	encoder := protocol.NewEncoder[protocol.Data](stream)
 	decoder := protocol.NewDecoder[protocol.GetRoutesResp](stream)
 
-	// Encode and send the request
 	if err := encoder.Encode(protocol.Data{
 		Command: protocol.GetRoutesReqCmd,
 		Body:    nil,
@@ -138,14 +135,12 @@ func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) 
 		return
 	}
 
-	// Decode the response
 	dec, err := decoder.Decode()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to decode data")
 		return
 	}
 
-	// Parse routes and filter non-loopback IPv4 addresses
 	var routes []string
 	for _, route := range dec.Routes {
 		ip, _, err := net.ParseCIDR(route)
@@ -158,7 +153,6 @@ func (s *Server) startHandshake(ctx context.Context, conn transport.StreamConn) 
 		}
 	}
 
-	// Add the new agent to the agent manager
 	a := agent.New(dec.Name, conn, routes)
 	s.agentManager.AddAgent(a)
 
