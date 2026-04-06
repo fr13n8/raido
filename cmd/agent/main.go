@@ -48,7 +48,7 @@ Flags:`)
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out: os.Stderr,
-		FormatTimestamp: func(i interface{}) string {
+		FormatTimestamp: func(i any) string {
 			return ""
 		},
 		// TimeFormat: time.RFC3339,

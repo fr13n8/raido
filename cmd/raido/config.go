@@ -82,7 +82,7 @@ func initLogger(logFile string) error {
 	if logFile == "console" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{
 			Out: os.Stdout,
-			FormatTimestamp: func(i interface{}) string {
+			FormatTimestamp: func(i any) string {
 				return ""
 			},
 		})

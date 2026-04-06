@@ -98,10 +98,8 @@ func TestPipeBidirectional(t *testing.T) {
 			upstream := newMockStream(tt.upstreamData)
 
 			var wg sync.WaitGroup
-			wg.Add(1)
 
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				err := PipeBidirectional(downstream, upstream)
 				if tt.expectError && err == nil {
 					t.Error("expected error but got nil")
@@ -109,7 +107,7 @@ func TestPipeBidirectional(t *testing.T) {
 				if !tt.expectError && err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
-			}()
+			})
 
 			done := make(chan struct{})
 			go func() {
