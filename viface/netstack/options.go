@@ -93,8 +93,9 @@ func tcpSendReceiveBufSize(size int) Option {
 
 func udpHandler(ctx context.Context, conn transport.StreamConn) Option {
 	return func(s *stack.Stack) error {
-		udpForwarder := udp.NewForwarder(s, func(fr *udp.ForwarderRequest) {
+		udpForwarder := udp.NewForwarder(s, func(fr *udp.ForwarderRequest) bool {
 			go handler.NewUDPHandler(conn).HandleRequest(ctx, fr)
+			return true
 		})
 		s.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 		return nil

@@ -41,7 +41,7 @@ func (t *QUICTransport) Listen(ctx context.Context, addr string) (transport.Stre
 
 // QUICStreamConn wraps a quic.Connection as a StreamConn.
 type QUICStreamConn struct {
-	conn       quic.Connection
+	conn       *quic.Conn
 	streamPool *transport.StreamPool
 }
 

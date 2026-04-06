@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: raido.Dockerfile
     image: raido:latest
+    ports:
+      - "8080:8080"
     networks:
       exposed:
         ipv4_address: 10.1.0.2

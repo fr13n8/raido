@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/quic-go/quic-go/logging"
+	"github.com/quic-go/quic-go/qlog"
 )
 
 // Helper to convert logging.ByteCount(alias for int64) to float64 used in prometheus
-func byteCountToPromCount(count logging.ByteCount) float64 {
+func byteCountToPromCount(count int64) float64 {
 	return float64(count)
 }
 
@@ -18,53 +18,51 @@ func durationToPromGauge(duration time.Duration) float64 {
 }
 
 // Helper to convert https://pkg.go.dev/github.com/quic-go/quic-go@vv0.47.0/logging#PacketType into string
-func packetTypeString(pt logging.PacketType) string {
+func packetTypeString(pt qlog.PacketType) string {
 	switch pt {
-	case logging.PacketTypeInitial:
+	case qlog.PacketTypeInitial:
 		return "initial"
-	case logging.PacketTypeHandshake:
+	case qlog.PacketTypeHandshake:
 		return "handshake"
-	case logging.PacketTypeRetry:
+	case qlog.PacketTypeRetry:
 		return "retry"
-	case logging.PacketType0RTT:
+	case qlog.PacketType0RTT:
 		return "0_rtt"
-	case logging.PacketTypeVersionNegotiation:
+	case qlog.PacketTypeVersionNegotiation:
 		return "version_negotiation"
-	case logging.PacketType1RTT:
+	case qlog.PacketType1RTT:
 		return "1_rtt"
-	case logging.PacketTypeStatelessReset:
+	case qlog.PacketTypeStatelessReset:
 		return "stateless_reset"
-	case logging.PacketTypeNotDetermined:
-		return "undetermined"
 	default:
 		return "unknown_packet_type"
 	}
 }
 
 // Helper to convert https://pkg.go.dev/github.com/quic-go/quic-go@vv0.47.0/logging#PacketDropReason into string
-func packetDropReasonString(reason logging.PacketDropReason) string {
+func packetDropReasonString(reason qlog.PacketDropReason) string {
 	switch reason {
-	case logging.PacketDropKeyUnavailable:
+	case qlog.PacketDropKeyUnavailable:
 		return "key_unavailable"
-	case logging.PacketDropUnknownConnectionID:
+	case qlog.PacketDropUnknownConnectionID:
 		return "unknown_conn_id"
-	case logging.PacketDropHeaderParseError:
+	case qlog.PacketDropHeaderParseError:
 		return "header_parse_err"
-	case logging.PacketDropPayloadDecryptError:
+	case qlog.PacketDropPayloadDecryptError:
 		return "payload_decrypt_err"
-	case logging.PacketDropProtocolViolation:
+	case qlog.PacketDropProtocolViolation:
 		return "protocol_violation"
-	case logging.PacketDropDOSPrevention:
+	case qlog.PacketDropDOSPrevention:
 		return "dos_prevention"
-	case logging.PacketDropUnsupportedVersion:
+	case qlog.PacketDropUnsupportedVersion:
 		return "unsupported_version"
-	case logging.PacketDropUnexpectedPacket:
+	case qlog.PacketDropUnexpectedPacket:
 		return "unexpected_packet"
-	case logging.PacketDropUnexpectedSourceConnectionID:
+	case qlog.PacketDropUnexpectedSourceConnectionID:
 		return "unexpected_src_conn_id"
-	case logging.PacketDropUnexpectedVersion:
+	case qlog.PacketDropUnexpectedVersion:
 		return "unexpected_version"
-	case logging.PacketDropDuplicate:
+	case qlog.PacketDropDuplicate:
 		return "duplicate"
 	default:
 		return "unknown_reason"
@@ -72,11 +70,11 @@ func packetDropReasonString(reason logging.PacketDropReason) string {
 }
 
 // Helper to convert https://pkg.go.dev/github.com/quic-go/quic-go@v0.47.0/logging#PacketLossReason into string
-func packetLossReasonString(reason logging.PacketLossReason) string {
+func packetLossReasonString(reason qlog.PacketLossReason) string {
 	switch reason {
-	case logging.PacketLossReorderingThreshold:
+	case qlog.PacketLossReorderingThreshold:
 		return "reordering"
-	case logging.PacketLossTimeThreshold:
+	case qlog.PacketLossTimeThreshold:
 		return "timeout"
 	default:
 		return "unknown_loss_reason"
